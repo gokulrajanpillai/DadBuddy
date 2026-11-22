@@ -236,7 +236,7 @@ function renderHeader() {
   const p = state.profile;
   $('#baby-name').textContent = p.babyName;
   $('#baby-age').textContent = p.dob ? ageLabel(ageInDays(p.dob)) : 'Add date of birth';
-  document.title = `${p.babyName} · Baby Log`;
+  document.title = `${p.babyName} · DadBuddy`;
   $('#who-chip').innerHTML = `<span class="avatar sm ${state.who}">${WHO_NAME[state.who][0]}</span>${WHO_NAME[state.who]}`;
 }
 
@@ -1069,7 +1069,7 @@ const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.p
 function renderInstall() {
   const el = $('#install');
   if (isStandalone()) { el.innerHTML = '<p class="hint">Installed as an app on this phone.</p>'; return; }
-  if (installPrompt) { el.innerHTML = '<button type="button" class="ghost-btn small" data-install>Install Baby Log on this phone</button>'; return; }
+  if (installPrompt) { el.innerHTML = '<button type="button" class="ghost-btn small" data-install>Install DadBuddy on this phone</button>'; return; }
   el.innerHTML = isIOS()
     ? '<p class="hint">To install: tap the Share button in Safari, then <b>Add to Home Screen</b>.</p>'
     : '<p class="hint">To install: open your browser menu and choose <b>Install app</b> or <b>Add to Home screen</b>.</p>';
@@ -1100,7 +1100,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
     state.profile = (await Store.getMeta('profile')) || state.profile;
     state.sync.lastSyncAt = await Store.getMeta('lastSyncAt');
   } catch {
-    toast('This browser is blocking storage, so Baby Log can\'t keep entries on this phone.');
+    toast('This browser is blocking storage, so DadBuddy can\'t keep entries on this phone.');
   }
   if (!state.who) {
     showLogin();

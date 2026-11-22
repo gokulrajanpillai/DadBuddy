@@ -1,6 +1,6 @@
-# Baby Log v2 — product and UX review
+# DadBuddy — product and UX review
 
-Review of v1 against NHS guidance (nhs.uk, read 21 Nov 2026) and UK baby-care conventions,
+DadBuddy started life as "Baby Log". Review of v1 against NHS guidance (nhs.uk, read 21 Nov 2026) and UK baby-care conventions,
 with the decision taken for each finding. Each guidance figure in the app links back to the page listed here.
 
 ## Sources (nhs.uk, with each page's "last reviewed" date)

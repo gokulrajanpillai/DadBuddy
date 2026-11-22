@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#16120f">
-  <title>Set up Baby Log</title>
+  <title>Set up DadBuddy</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
     :root {
@@ -66,9 +66,9 @@
 </head>
 <body>
 <main>
-  <div class="brand"><img src="icon.svg" alt=""><strong>Baby Log</strong></div>
-  <h1>Set up Baby Log on this phone</h1>
-  <p class="lead">This takes about two minutes, once per phone. Afterwards Baby Log works like an app: you can log anywhere, and it syncs with the other phone when you're both on home Wi-Fi.</p>
+  <div class="brand"><img src="icon.svg" alt=""><strong>DadBuddy</strong></div>
+  <h1>Set up DadBuddy on this phone</h1>
+  <p class="lead">This takes about two minutes, once per phone. Afterwards DadBuddy works like an app: you can log anywhere, and it syncs with the other phone when you're both on home Wi-Fi.</p>
 
   <div class="tabs" role="group" aria-label="Phone type">
     <button type="button" data-os="ios">iPhone</button>
@@ -79,7 +79,7 @@
     <span class="num">1</span>
     <div>
       <h2>Download the home certificate</h2>
-      <p>It lets this phone open Baby Log securely. It only covers <b>baby.local</b> and home network addresses.</p>
+      <p>It lets this phone open DadBuddy securely. It only covers <b>baby.local</b> and home network addresses.</p>
       <p data-for="ios">Use <b>Safari</b> for this step. Tap the button, then tap <b>Allow</b>.</p>
       <a class="btn" href="/baby-log-ca.crt" download="baby-log-ca.crt">Download certificate</a>
     </div>
@@ -91,8 +91,8 @@
       <h2>Install it</h2>
       <ol data-for="ios">
         <li>Open <b>Settings</b>. Tap <b>Profile Downloaded</b> near the top (or go to General → VPN &amp; Device Management).</li>
-        <li>Tap <b>Baby Log home certificate</b> → <b>Install</b>, and enter your passcode.</li>
-        <li>Then go to Settings → General → About → <b>Certificate Trust Settings</b> and turn on <b>Baby Log home certificate</b>.</li>
+        <li>Tap <b>DadBuddy home certificate</b> → <b>Install</b>, and enter your passcode.</li>
+        <li>Then go to Settings → General → About → <b>Certificate Trust Settings</b> and turn on <b>DadBuddy home certificate</b>.</li>
       </ol>
       <ol data-for="android">
         <li>Open <b>Settings</b> and search for <b>CA certificate</b>. (It's usually under Security → More security settings → Encryption &amp; credentials → Install a certificate.)</li>
@@ -108,7 +108,7 @@
     <div>
       <h2>Check it worked</h2>
       <p class="status wait" id="check-status" role="status">Waiting for this phone to trust the certificate…</p>
-      <a class="btn" id="open-app" href="/" hidden>Open Baby Log</a>
+      <a class="btn" id="open-app" href="/" hidden>Open DadBuddy</a>
     </div>
   </section>
 
@@ -117,14 +117,14 @@
     <div>
       <h2>Add it to your home screen</h2>
       <ol data-for="ios">
-        <li>After opening Baby Log in Safari, tap the <b>Share</b> button.</li>
+        <li>After opening DadBuddy in Safari, tap the <b>Share</b> button.</li>
         <li>Tap <b>Add to Home Screen</b> → <b>Add</b>.</li>
-        <li>Open Baby Log from the home screen and tap <b>Mum</b> or <b>Dad</b>.</li>
+        <li>Open DadBuddy from the home screen and tap <b>Mum</b> or <b>Dad</b>.</li>
       </ol>
       <ol data-for="android">
-        <li>After opening Baby Log in Chrome, tap the <b>⋮</b> menu.</li>
+        <li>After opening DadBuddy in Chrome, tap the <b>⋮</b> menu.</li>
         <li>Tap <b>Install app</b> (or <b>Add to Home screen</b>).</li>
-        <li>Open Baby Log from the home screen and tap <b>Mum</b> or <b>Dad</b>.</li>
+        <li>Open DadBuddy from the home screen and tap <b>Mum</b> or <b>Dad</b>.</li>
       </ol>
       <p class="note">Open it at home once so it can copy the log. After that it works anywhere.</p>
     </div>
@@ -151,7 +151,7 @@
 
     function trusted() {
       document.getElementById('check-status').className = 'status ok';
-      document.getElementById('check-status').textContent = '✓ This phone trusts Baby Log.';
+      document.getElementById('check-status').textContent = '✓ This phone trusts DadBuddy.';
       ['step-cert', 'step-install', 'step-check'].forEach(function (id) { document.getElementById(id).classList.add('done'); });
       var a = document.getElementById('open-app');
       a.href = appUrl;

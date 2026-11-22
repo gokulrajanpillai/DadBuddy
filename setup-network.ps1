@@ -1,4 +1,4 @@
-# One-time network setup for the baby tracker. Run in an ADMIN PowerShell:
+# One-time network setup for DadBuddy. Run in an ADMIN PowerShell:
 #   powershell -ExecutionPolicy Bypass -File .\setup-network.ps1
 #
 # 1. Marks your Wi-Fi as a Private network (home network; lets other devices reach this PC).
@@ -21,10 +21,12 @@ foreach ($p in $wifi) {
 }
 
 $rules = @(
-    @{ DisplayName = 'Baby Tracker (HTTPS 443)'; Protocol = 'TCP'; LocalPort = 443 },
-    @{ DisplayName = 'Baby Tracker (HTTP 80)'; Protocol = 'TCP'; LocalPort = 80 },
-    @{ DisplayName = 'Baby Tracker (mDNS 5353)'; Protocol = 'UDP'; LocalPort = 5353 }
+    @{ DisplayName = 'DadBuddy (HTTPS 443)'; Protocol = 'TCP'; LocalPort = 443 },
+    @{ DisplayName = 'DadBuddy (HTTP 80)'; Protocol = 'TCP'; LocalPort = 80 },
+    @{ DisplayName = 'DadBuddy (mDNS 5353)'; Protocol = 'UDP'; LocalPort = 5353 }
 )
+# Rules from before the app was renamed.
+Get-NetFirewallRule -DisplayName 'Baby Tracker (*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 foreach ($r in $rules) {
     Get-NetFirewallRule -DisplayName $r.DisplayName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
     New-NetFirewallRule -DisplayName $r.DisplayName -Direction Inbound -Action Allow `

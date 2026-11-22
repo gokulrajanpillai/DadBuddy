@@ -1,6 +1,6 @@
-# Starts the baby tracker automatically (hidden) whenever you log in to Windows.
+# Starts DadBuddy automatically (hidden) whenever you log in to Windows.
 #   powershell -ExecutionPolicy Bypass -File .\install-autostart.ps1
-# Remove with:  Unregister-ScheduledTask -TaskName 'Baby Tracker' -Confirm:$false
+# Remove with:  Unregister-ScheduledTask -TaskName 'DadBuddy' -Confirm:$false
 
 $dir  = $PSScriptRoot
 $node = (Get-Command node).Source
@@ -14,7 +14,10 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
             -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1)
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
 
-Register-ScheduledTask -TaskName 'Baby Tracker' -Action $action -Trigger $trigger -Settings $settings `
+# The task from before the app was renamed.
+Unregister-ScheduledTask -TaskName 'Baby Tracker' -Confirm:$false -ErrorAction SilentlyContinue
+
+Register-ScheduledTask -TaskName 'DadBuddy' -Action $action -Trigger $trigger -Settings $settings `
     -Principal $principal -Force | Out-Null
-Start-ScheduledTask -TaskName 'Baby Tracker'
+Start-ScheduledTask -TaskName 'DadBuddy'
 Write-Host "Installed. Logs: $log"

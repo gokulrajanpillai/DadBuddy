@@ -1,4 +1,4 @@
-// Baby Log: a small web app for the home network.
+// DadBuddy: a small web app for the home network.
 // - HTTPS on HTTPS_PORT (default 443) with a home certificate (see certs.js), so phones can
 //   install it and use it offline; HTTP on PORT (default 80) for the phone setup page
 // - SQLite storage in ./data/baby.db (node:sqlite, no native deps)
@@ -560,7 +560,7 @@ async function start() {
     await refreshMdns();
     setInterval(refreshMdns, 60_000).unref(); // follow DHCP changes
     const s = HTTPS_PORT === 443 ? '' : `:${HTTPS_PORT}`, h = PORT === 80 ? '' : `:${PORT}`;
-    console.log('Baby Log running:');
+    console.log('DadBuddy running:');
     if (httpsServer?.listening) {
       console.log(`  https://${MDNS_HOST}${s}   (the app)`);
       console.log(`  http://${MDNS_HOST}${h}/setup   (phone setup: install the home certificate)`);

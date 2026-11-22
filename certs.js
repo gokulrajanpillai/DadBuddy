@@ -43,8 +43,8 @@ prompt = no
 distinguished_name = dn
 x509_extensions = v3_ca
 [dn]
-CN = Baby Log home certificate
-O = Baby Log
+CN = DadBuddy home certificate
+O = DadBuddy
 [v3_ca]
 basicConstraints = critical, CA:true, pathlen:0
 keyUsage = critical, keyCertSign, cRLSign

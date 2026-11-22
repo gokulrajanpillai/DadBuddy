@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Baby Log",
-  "short_name": "Baby Log",
+  "name": "DadBuddy",
+  "short_name": "DadBuddy",
   "description": "Feeds, nappies, sleep and NHS-based checks, shared between Mum and Dad.",
   "start_url": "/",
   "scope": "/",

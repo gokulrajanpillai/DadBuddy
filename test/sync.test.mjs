@@ -45,7 +45,7 @@ before(async () => {
   });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`server did not start:\n${log}`)), 20000);
-    const onData = (d) => { log += d; if (log.includes('Baby Log running')) { clearTimeout(timer); resolve(); } };
+    const onData = (d) => { log += d; if (log.includes('DadBuddy running')) { clearTimeout(timer); resolve(); } };
     proc.stdout.on('data', onData);
     proc.stderr.on('data', onData);
   });

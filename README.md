@@ -1,4 +1,8 @@
-# Baby Log
+<p align="center"><img src="public/icon.svg" width="112" alt="DadBuddy logo: a yellow D hugging a sleeping baby"></p>
+
+<h1 align="center">DadBuddy</h1>
+
+<p align="center">Your night-shift buddy. A baby tracker for two parents that works offline and syncs over your home Wi-Fi.</p>
 
 A feed, nappy and sleep tracker that installs on your phones like an app. It works anywhere, and syncs between Mum's and Dad's phones over your **home Wi-Fi**. The checks and alerts follow NHS guidance.
 See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source and its review date.
@@ -23,7 +27,7 @@ See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source 
 - **Themes:** Light, Dark and a dim, warm **Night light**. Auto switches to Night light from 21:00 to 07:00.
 - UK English, 24-hour times.
 
-Baby Log isn't a medical device. It records what you log and points to NHS advice.
+DadBuddy isn't a medical device. It records what you log and points to NHS advice.
 
 ## How syncing works
 
@@ -58,7 +62,7 @@ This sets the Wi-Fi network to **Private** and opens TCP 443, TCP 80 and UDP 535
 1. Download the home certificate.
 2. Install and trust it.
 3. Check it shows green.
-4. Add Baby Log to the home screen.
+4. Add DadBuddy to the home screen.
 5. Open it from the home screen and tap Mum or Dad.
 
 On iPhone, use Safari. An installed app keeps its own storage, so sign in inside the installed app.

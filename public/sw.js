@@ -1,10 +1,10 @@
 'use strict';
-// Keeps the app's own files on the phone so Baby Log opens with no connection.
+// Keeps the app's own files on the phone so DadBuddy opens with no connection.
 // Files are served from the phone first and refreshed in the background, so a new version
 // arrives the next time the app is opened at home. Entries never pass through here:
 // /api/ requests always go to the network (the app keeps its data in IndexedDB).
 
-const CACHE = 'baby-log-v3';
+const CACHE = 'dadbuddy-v4';
 const SHELL = [
   '/',
   '/index.html',
@@ -53,7 +53,7 @@ self.addEventListener('fetch', (ev) => {
         ev.waitUntil(fresh);
         return cached;
       }
-      return (await fresh) || new Response('Baby Log is offline and not cached yet. Open it once at home first.', {
+      return (await fresh) || new Response('DadBuddy is offline and not cached yet. Open it once at home first.', {
         status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       });
     })
