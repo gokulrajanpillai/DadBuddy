@@ -250,7 +250,7 @@ function greetingFor(h) {
 }
 function babyLine(p) {
   const named = p.babyName && p.babyName !== 'Baby';
-  if (!p.dob) return named ? `Add ${p.babyName}'s date of birth` : "Add your baby's name and birthday";
+  if (!p.dob) return named ? `Add ${p.babyName}'s date of birth` : "Add your baby's details";
   const age = ageLabel(ageInDays(p.dob));
   const who = named ? p.babyName : 'Your baby';
   if (age === 'Born today') return `${who} was born today`;
@@ -357,8 +357,8 @@ function renderToday() {
 
   // ---- Setup prompt
   $('#setup-card').innerHTML = !state.profile.dob && !storage.get('setupLater', false)
-    ? `<div class="setup"><p>Add your baby's date of birth so the checks match NHS guidance for their age.</p>
-        <span class="row"><button class="mini-btn" data-open="settings">Add</button><button class="text-btn" data-setup-later>Later</button></span></div>`
+    ? `<div class="setup"><img src="icon.svg" alt="" width="40" height="40"><p><b>Tell DadBuddy about your little one.</b> Add their name and birthday so the checks match NHS guidance for their age.</p>
+        <span class="row"><button class="mini-btn sun" data-open="settings">Add details</button><button class="text-btn" data-setup-later>Later</button></span></div>`
     : '';
 
   // ---- Timers
