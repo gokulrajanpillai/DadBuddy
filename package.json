@@ -1,0 +1,23 @@
+{
+  "name": "dadbuddy",
+  "version": "3.0.0",
+  "private": true,
+  "description": "A friendly, offline-first baby tracker for two parents, synced over your home Wi-Fi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gokulrajanpillai/DadBuddy.git"
+  },
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.*"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "multicast-dns": "^7.2.5"
+  }
+}
