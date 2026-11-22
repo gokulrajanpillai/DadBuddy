@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Baby Log",
+  "short_name": "Baby Log",
+  "description": "Feeds, nappies, sleep and NHS-based checks, shared between Mum and Dad.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "en-GB",
+  "background_color": "#141312",
+  "theme_color": "#141312",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

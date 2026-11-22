@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16120f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Baby Log">
+  <meta name="description" content="Feeds, nappies, sleep and health checks for your baby, shared between Mum and Dad on your home network.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <title>Baby Log</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved theme before first paint (no flash of a bright screen at night).
+    (function () {
+      try {
+        var t = localStorage.getItem('theme') || 'auto';
+        var h = new Date().getHours();
+        if (t === 'auto' && (h >= 21 || h < 7)) t = 'night';
+        if (t !== 'auto') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ============================================================ sign in -->
+  <section id="login" class="login" hidden>
+    <div class="login-inner">
+      <svg class="login-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-moon"/></svg>
+      <p class="eyebrow" id="login-baby">Baby Log</p>
+      <h1>Who's on duty?</h1>
+      <div class="login-buttons">
+        <button class="who-btn" data-who="mum"><span class="avatar mum">M</span><span>Mum</span></button>
+        <button class="who-btn" data-who="dad"><span class="avatar dad">D</span><span>Dad</span></button>
+      </div>
+      <p class="muted small">This phone remembers you. Tap your name at the top of the app to switch.</p>
+    </div>
+  </section>
+
+  <div id="app" hidden>
+    <header class="topbar">
+      <button id="profile-btn" class="baby-id" aria-label="Baby profile and settings">
+        <span id="baby-name" class="baby-name">Baby</span>
+        <span id="baby-age" class="baby-age"></span>
+      </button>
+      <div class="topbar-right">
+        <button id="who-chip" class="who-chip" aria-label="Switch person"></button>
+        <button id="settings-btn" class="icon-btn" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
+      </div>
+    </header>
+    <button id="sync-bar" class="sync-bar" type="button" hidden><svg aria-hidden="true"><use href="#i-clock"/></svg><span id="sync-text"></span></button>
+
+    <main>
+      <!-- ========================================================== TODAY -->
+      <section data-view="today" class="view">
+        <div id="alerts"></div>
+        <div id="setup-card"></div>
+        <div id="timers"></div>
+
+        <div class="status-row">
+          <article class="status feed">
+            <h2><svg><use href="#i-feed"/></svg>Last feed</h2>
+            <p class="big" id="last-feed-ago">—</p>
+            <p class="sub" id="last-feed-detail">Nothing logged yet</p>
+          </article>
+          <article class="status nappy">
+            <h2><svg><use href="#i-nappy"/></svg>Last nappy</h2>
+            <p class="big" id="last-nappy-ago">—</p>
+            <p class="sub" id="last-nappy-detail">Nothing logged yet</p>
+          </article>
+          <article class="status sleep">
+            <h2><svg><use href="#i-moon"/></svg><span id="sleep-title">Sleep</span></h2>
+            <p class="big" id="sleep-big">—</p>
+            <p class="sub" id="sleep-detail">Nothing logged yet</p>
+          </article>
+        </div>
+
+        <h3 class="section-label">Feed</h3>
+        <div class="grid g2">
+          <button class="act feed" data-quick="feed:left"><svg><use href="#i-breast"/></svg><b>Left</b><small>Start timer</small><i class="tag" hidden>Last side</i></button>
+          <button class="act feed" data-quick="feed:right"><svg><use href="#i-breast"/></svg><b>Right</b><small>Start timer</small><i class="tag" hidden>Last side</i></button>
+          <button class="act feed" data-quick="feed:expressed"><svg><use href="#i-bottle"/></svg><b>Expressed</b><small>Breast milk, ml</small></button>
+          <button class="act feed" data-quick="feed:formula"><svg><use href="#i-bottle"/></svg><b>Formula</b><small>ml</small></button>
+        </div>
+
+        <h3 class="section-label">Nappy</h3>
+        <div class="grid g3">
+          <button class="act nappy" data-quick="nappy:wet"><svg><use href="#i-drop"/></svg><b>Wet</b></button>
+          <button class="act nappy" data-quick="nappy:dirty"><svg><use href="#i-nappy"/></svg><b>Dirty</b></button>
+          <button class="act nappy" data-quick="nappy:both"><svg><use href="#i-nappy"/></svg><b>Both</b></button>
+        </div>
+
+        <h3 class="section-label">More</h3>
+        <div class="grid g4">
+          <button class="act sleep small" data-quick="sleep"><svg><use href="#i-moon"/></svg><b id="sleep-btn-label">Sleep</b></button>
+          <button class="act health small" data-quick="temp"><svg><use href="#i-thermo"/></svg><b>Temp</b></button>
+          <button class="act health small" data-quick="vitd"><svg><use href="#i-sun"/></svg><b>Vitamin D</b></button>
+          <button class="act health small" data-quick="weight"><svg><use href="#i-scale"/></svg><b>Weight</b></button>
+        </div>
+
+        <div class="checks-head">
+          <h3 class="section-label">Today's checks</h3>
+          <a class="src-link" href="#help-feeding" data-goto="help">How these work</a>
+        </div>
+        <div id="checks-stale"></div>
+        <ul id="checks" class="checks"></ul>
+
+        <button id="add-past" class="ghost-btn">+ Add something you forgot to log</button>
+
+        <h3 class="section-label">Recent</h3>
+        <ul id="recent" class="event-list"></ul>
+      </section>
+
+      <!-- ========================================================== TRENDS -->
+      <section data-view="trends" class="view" hidden>
+        <h3 class="section-label">Last 24 hours</h3>
+        <div id="tiles" class="tiles"></div>
+
+        <figure class="chart-card">
+          <figcaption>
+            <span>Last 24 hours</span>
+            <span class="legend">
+              <span><i class="sw feed"></i>Feed</span>
+              <span><i class="sw sleep"></i>Sleep</span>
+              <span><i class="sw nappy round"></i>Nappy</span>
+            </span>
+          </figcaption>
+          <div id="timeline"></div>
+        </figure>
+
+        <h3 class="section-label">Last 7 days</h3>
+        <div class="multiples">
+          <figure class="chart-card mini"><figcaption><span>Feeds per day</span></figcaption><div id="c-feeds"></div></figure>
+          <figure class="chart-card mini"><figcaption><span>Wet nappies per day</span></figcaption><div id="c-wet"></div></figure>
+          <figure class="chart-card mini"><figcaption><span>Poos per day</span></figcaption><div id="c-poo"></div></figure>
+          <figure class="chart-card mini"><figcaption><span>Sleep per day (hours)</span></figcaption><div id="c-sleep"></div></figure>
+        </div>
+        <div class="table-wrap"><table id="day-table"></table></div>
+
+        <h3 class="section-label">Weight</h3>
+        <div id="weights" class="card-list"></div>
+        <h3 class="section-label">Temperature</h3>
+        <div id="temps" class="card-list"></div>
+
+        <p class="footnote">Feeds that start within 30 minutes of the last one (for example switching sides) count as one feed.
+          Time between feeds is measured from the start of one feed to the start of the next. These numbers describe your
+          baby's pattern; they are not targets. The NHS advises feeding responsively.</p>
+      </section>
+
+      <!-- ========================================================== HISTORY -->
+      <section data-view="history" class="view" hidden>
+        <div class="filters" id="filters" role="radiogroup" aria-label="Filter">
+          <button data-filter="all" class="on">All</button>
+          <button data-filter="feed">Feeds</button>
+          <button data-filter="nappy">Nappies</button>
+          <button data-filter="sleep">Sleep</button>
+          <button data-filter="health">Health</button>
+        </div>
+        <div id="history"></div>
+        <button id="older" class="ghost-btn">Show older</button>
+      </section>
+
+      <!-- ========================================================== HELP -->
+      <section data-view="help" class="view help" hidden>
+        <div class="urgent-card">
+          <h2>If you think something is seriously wrong</h2>
+          <p>Trust your instincts — you know your baby best. This app only records what you log. It cannot diagnose anything and is not a medical device.</p>
+          <div class="call-row">
+            <a class="call urgent" href="tel:999">Call 999</a>
+            <a class="call" href="tel:111">Call 111</a>
+            <a class="call" href="https://111.nhs.uk/" target="_blank" rel="noopener">111 online</a>
+          </div>
+        </div>
+
+        <details class="help-sec" open>
+          <summary>Call 999 or go to A&amp;E if your baby…</summary>
+          <ul>
+            <li>has difficulty breathing, is breathing very fast, grunting, or sucking in under their ribs</li>
+            <li>has blue, grey, pale or blotchy skin, lips or tongue</li>
+            <li>is floppy, very hard to wake, or cannot be woken</li>
+            <li>has a rash that does not fade when you press a glass against it</li>
+            <li>has a fit (seizure)</li>
+            <li>has a temperature of 38°C or higher and is under 3 months old</li>
+            <li>has a temperature of 39°C or higher and is 3 to 6 months old (if they had vaccines in the last 2 days, call 111)</li>
+            <li>has a temperature under 36°C (re-check twice within 10 minutes first), or feels cold, clammy or shivery</li>
+            <li>has a weak, high-pitched or continuous cry</li>
+            <li>has not had a wet nappy in the last 12 hours</li>
+            <li>is not feeding</li>
+            <li>has swollen lips, tongue or throat</li>
+          </ul>
+          <p class="src">Source: <a href="https://www.nhs.uk/baby/health/when-to-get-urgent-medical-help-for-babies-and-children-under-5/" target="_blank" rel="noopener">NHS — when to get urgent medical help for babies and children under 5</a></p>
+        </details>
+
+        <details class="help-sec" id="help-fever">
+          <summary>Temperature and fever</summary>
+          <ul>
+            <li>Use a digital thermometer <strong>under the arm</strong>. Hold their arm against their side for as long as the thermometer says (usually about 15 seconds). Forehead strips and ear thermometers are less accurate for babies.</li>
+            <li>A normal temperature is about 36.4°C. A high temperature is <strong>38°C or more</strong>.</li>
+            <li>Under 3 months, 38°C or more: get medical help straight away. (NHS urgent-help page: 999 or A&amp;E. NHS fever page: 111.)</li>
+            <li>3 to 6 months, 39°C or more: get medical help straight away, as above.</li>
+            <li>Any age: call 111 if a high temperature lasts 5 days or more, or comes with other worrying signs.</li>
+            <li>Do not give paracetamol under 2 months, or ibuprofen under 3 months or under 5kg, unless a doctor tells you to.</li>
+            <li>Keep offering feeds. Do not sponge them down or wrap them up.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/conditions/fever-in-children/" target="_blank" rel="noopener">NHS — fever in children</a> · <a href="https://www.nhs.uk/baby/health/how-to-take-your-babys-temperature/" target="_blank" rel="noopener">NHS — how to take your baby's temperature</a></p>
+        </details>
+
+        <details class="help-sec" id="help-feeding">
+          <summary>Feeding and "Today's checks"</summary>
+          <ul>
+            <li><strong>Feed responsively.</strong> Offer a feed when your baby shows early hunger cues: stirring, rooting, sucking their fist, murmuring. Crying is a late sign. You cannot overfeed a breastfed baby.</li>
+            <li>In the first few weeks most babies feed <strong>at least 8 to 12 times in 24 hours</strong>, sometimes more, and every 1 to 3 hours in the first few days. The app compares feeds in the last 24 hours against this rough guide while your baby is under 6 weeks.</li>
+            <li>Bottle feeding: feed when they seem hungry, take your time, and do not worry if they don't finish the bottle. Never force them to finish.</li>
+            <li>A check only shows "Below guide" once you've been logging for its whole time window, so starting the app halfway through a day won't set it off.</li>
+            <li>Breastfeeding worries? Ask early. Talk to your midwife or health visitor, or call the National Breastfeeding Helpline on <a href="tel:03001000212">0300 100 0212</a>.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/breastfeeding/the-first-few-days/" target="_blank" rel="noopener">NHS — breastfeeding: the first few days</a> · <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/bottle-feeding/advice/" target="_blank" rel="noopener">NHS — bottle feeding advice</a></p>
+        </details>
+
+        <details class="help-sec" id="help-nappies">
+          <summary>Nappies: what's expected</summary>
+          <table class="guide-table">
+            <thead><tr><th>Age</th><th>Wet</th><th>Poo</th></tr></thead>
+            <tbody>
+              <tr><td>First 48 hours</td><td>2 to 3</td><td>Meconium: dark, sticky</td></tr>
+              <tr><td>Day 4 onwards</td><td>Increasing</td><td>At least 2 a day, soft and yellow, about the size of a £2 coin</td></tr>
+              <tr><td>Day 5 onwards</td><td>At least 6 heavy wet nappies a day</td><td>As above, for the first few weeks</td></tr>
+            </tbody>
+          </table>
+          <ul>
+            <li><strong>Pale, creamy or chalky poo</strong>, or <strong>dark yellow or brown pee</strong>: get an urgent GP or midwife appointment, or call 111. Keep a nappy to show them.</li>
+            <li>Under 8 weeks and no poo for 2 to 3 days: talk to your midwife, health visitor or GP, especially if your baby is gaining weight slowly.</li>
+            <li>Fewer wet nappies than usual, a sunken soft spot on the head, or few or no tears can be signs of dehydration: urgent GP appointment or call 111.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/breastfeeding-problems/enough-milk/" target="_blank" rel="noopener">NHS — is my baby getting enough milk?</a> · <a href="https://www.nhs.uk/conditions/jaundice-newborn/" target="_blank" rel="noopener">NHS — newborn jaundice</a> · <a href="https://www.nhs.uk/conditions/dehydration/" target="_blank" rel="noopener">NHS — dehydration</a></p>
+        </details>
+
+        <details class="help-sec" id="help-sleep">
+          <summary>Safe sleep</summary>
+          <ul>
+            <li>Always put your baby down <strong>on their back</strong>, with their feet at the foot of the cot.</li>
+            <li>Use a separate cot or Moses basket with a firm, flat mattress, in the same room as you for every sleep for at least the first 6 months.</li>
+            <li>Keep the cot clear: no pillows, duvets, bumpers, pods, nests or soft toys.</li>
+            <li>Keep the room at about 16 to 20°C. Use a lightweight blanket or a baby sleeping bag, and never a hot water bottle or electric blanket.</li>
+            <li>Never sleep with your baby on a sofa or armchair. Don't share a bed if anyone in it smokes, has had alcohol or drugs, or takes medicine that makes them drowsy, or if your baby was premature or small at birth.</li>
+            <li>Newborns sleep about 18 hours in 24, in short stretches. Every baby has their own pattern.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/baby/caring-for-a-newborn/reduce-the-risk-of-sudden-infant-death-syndrome/" target="_blank" rel="noopener">NHS — reduce the risk of SIDS</a> · <a href="https://www.nhs.uk/baby/caring-for-a-newborn/helping-your-baby-to-sleep/" target="_blank" rel="noopener">NHS — helping your baby to sleep</a></p>
+        </details>
+
+        <details class="help-sec" id="help-formula">
+          <summary>Making up formula safely</summary>
+          <ul>
+            <li>Make up one feed at a time, when it's needed.</li>
+            <li>Use water that was boiled and left for no more than 30 minutes, so it's still at least 70°C. Don't add extra powder.</li>
+            <li>Cool the feed to body temperature. Never warm it in a microwave.</li>
+            <li>Throw away any milk left in the bottle after a feed.</li>
+            <li>If you need to take a feed out: keep it in the fridge and use within 24 hours, within 4 hours in a cool bag with an ice pack, or within 2 hours at room temperature.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/bottle-feeding/making-up-baby-formula/" target="_blank" rel="noopener">NHS — making up baby formula</a> · <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/bottle-feeding/formula-milk-questions/" target="_blank" rel="noopener">NHS — formula milk questions</a></p>
+        </details>
+
+        <details class="help-sec" id="help-vitd">
+          <summary>Vitamin D</summary>
+          <ul>
+            <li>Breastfed babies should have a daily vitamin D supplement of 8.5 to 10 micrograms from birth, even if the mother takes one too.</li>
+            <li>Babies having more than 500ml of formula a day don't need it, because formula is already fortified. The app stops the check when logged formula is over 500ml in 24 hours.</li>
+            <li>Don't give two supplements together (for example vitamin drops and cod liver oil). Families on Healthy Start can get free vitamin drops.</li>
+          </ul>
+          <p class="src">Source: <a href="https://www.nhs.uk/conditions/baby/weaning-and-feeding/vitamins-for-children/" target="_blank" rel="noopener">NHS — vitamins for children</a></p>
+        </details>
+
+        <p class="footnote">Guidance summarised from nhs.uk pages last reviewed between 2023 and 2026; read on 21 November 2026. Always follow the advice of your midwife, health visitor or GP.</p>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Sections">
+      <button data-tab="today" class="active"><svg><use href="#i-home"/></svg>Today</button>
+      <button data-tab="trends"><svg><use href="#i-chart"/></svg>Trends</button>
+      <button data-tab="history"><svg><use href="#i-list"/></svg>History</button>
+      <button data-tab="help"><svg><use href="#i-help"/></svg>Help</button>
+    </nav>
+  </div>
+
+  <!-- ============================================================ entry sheet -->
+  <dialog id="sheet" class="sheet" aria-labelledby="sheet-title">
+    <form id="entry-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="sheet-title">Add entry</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+
+      <div class="seg wrap3" id="kind-seg" role="radiogroup" aria-label="Type"></div>
+      <div class="seg" id="subtype-seg" role="radiogroup" aria-label="Kind"></div>
+
+      <label class="field">
+        <span id="when-label">When</span>
+        <span class="row">
+          <input type="datetime-local" name="start" required>
+          <button type="button" class="chip" id="now-btn">Now</button>
+        </span>
+      </label>
+
+      <div class="field" id="duration-field">
+        <span>How long</span>
+        <span class="row dur">
+          <label><input type="number" name="dur_h" min="0" max="16" inputmode="numeric" aria-label="Hours"><em>h</em></label>
+          <label><input type="number" name="dur_m" min="0" max="59" inputmode="numeric" aria-label="Minutes"><em>min</em></label>
+        </span>
+      </div>
+      <p class="field-note" id="running-note" hidden>This timer is still running. Stop it from the Today screen.</p>
+
+      <div class="field" id="amount-field">
+        <span>Amount taken (ml)</span>
+        <input type="number" name="amount" min="0" max="500" inputmode="numeric">
+        <div class="chips" id="amount-chips"></div>
+        <p class="hint">Responsive bottle feeding: let your baby decide how much. It's fine if they don't finish.</p>
+      </div>
+
+      <div class="field" id="poo-field">
+        <span>Poo colour</span>
+        <div class="swatches" id="poo-swatches" role="radiogroup" aria-label="Poo colour"></div>
+      </div>
+
+      <label class="check-field" id="pee-field">
+        <input type="checkbox" name="pee_dark">
+        <span>Pee looked dark yellow or brown</span>
+      </label>
+
+      <div class="field" id="value-field">
+        <span id="value-label">Temperature (°C)</span>
+        <input type="number" name="value" step="0.1" inputmode="decimal">
+        <p class="hint" id="value-hint"></p>
+      </div>
+
+      <label class="field">
+        <span>Note <em>(optional)</em></span>
+        <textarea name="note" rows="2" maxlength="500"></textarea>
+      </label>
+
+      <p class="form-error" id="form-error" role="alert" hidden></p>
+
+      <div class="sheet-actions">
+        <button type="button" class="danger-btn" id="delete-btn" hidden>Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost-btn small" data-close>Cancel</button>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============================================================ quick poo colour -->
+  <dialog id="poo-sheet" class="sheet" aria-labelledby="poo-title">
+    <form method="dialog" id="poo-form">
+      <div class="sheet-head">
+        <h2 id="poo-title">What colour was the poo?</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <label class="check-field" id="poo-pee-field">
+        <input type="checkbox" name="pee_dark">
+        <span>Pee looked dark yellow or brown</span>
+      </label>
+      <p class="hint">Tap a colour to log it.</p>
+      <div class="swatches big" id="poo-quick"></div>
+      <div class="sheet-actions">
+        <span class="spacer"></span>
+        <button type="button" class="ghost-btn small" id="poo-skip">Not sure, just log it</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============================================================ profile & settings -->
+  <dialog id="settings" class="sheet" aria-labelledby="settings-title">
+    <form id="settings-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="settings-title">Baby profile</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <label class="field"><span>Name</span><input name="name" maxlength="40" autocomplete="off" required></label>
+      <label class="field"><span>Date of birth</span><input name="dob" type="date"></label>
+      <p class="hint">Today's checks use your baby's age to match NHS guidance.</p>
+      <label class="field"><span>Birth weight (kg) <em>(optional)</em></span><input name="bw" type="number" step="0.01" min="0.4" max="8" inputmode="decimal"></label>
+
+      <div class="field">
+        <span>Display</span>
+        <div class="seg" id="theme-seg" role="radiogroup" aria-label="Display theme">
+          <label><input type="radio" name="theme" value="auto"><span>Auto</span></label>
+          <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+          <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+          <label><input type="radio" name="theme" value="night"><span>Night light</span></label>
+        </div>
+        <p class="hint">Auto uses your phone's setting by day and the dim, warm Night light from 9pm to 7am.</p>
+      </div>
+
+      <div class="field">
+        <span>This phone</span>
+        <p class="hint" id="settings-sync"></p>
+        <div id="install"></div>
+      </div>
+
+      <p class="form-error" id="settings-error" role="alert" hidden></p>
+
+      <div class="sheet-actions">
+        <button type="button" class="ghost-btn small" data-export>Export CSV</button>
+        <span class="spacer"></span>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+      <p class="footnote">Baby Log records what you log. Entries stay on your phones and your home computer, and sync over your home Wi-Fi. It isn't a medical device and doesn't replace your midwife, health visitor, GP or NHS 111.</p>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-msg"></span><button id="toast-action" hidden></button></div>
+  <div id="tip" class="tip" hidden></div>
+
+  <!-- ============================================================ icons -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="i-feed" viewBox="0 0 24 24"><path d="M12 3c3 3.5 5 6.4 5 9a5 5 0 0 1-10 0c0-2.6 2-5.5 5-9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="i-breast" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="1.8" fill="currentColor"/></symbol>
+      <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M10 2h4M10.5 2v3l-1.5 2.5V20a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V7.5L13.5 5V2M9 11h6M9 15h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3 3.5 5.5 6.6 5.5 9.5a5.5 5.5 0 0 1-11 0C6.5 9.6 9 6.5 12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="i-nappy" viewBox="0 0 24 24"><path d="M3 6h18v3a9 9 0 0 1-6 8.5V20H9v-2.5A9 9 0 0 1 3 9V6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M10 4a2 2 0 0 1 4 0v10a4 4 0 1 1-4 0V4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="17" r="1.6" fill="currentColor"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-scale" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 9.5a5 5 0 0 1 7 0L12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></g></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4v-9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5M12 17v.3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+      <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    </defs>
+  </svg>
+
+  <script src="guidance.js"></script>
+  <script src="rules.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
