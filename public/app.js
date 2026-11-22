@@ -234,10 +234,32 @@ function renderAll() {
 
 function renderHeader() {
   const p = state.profile;
-  $('#baby-name').textContent = p.babyName;
-  $('#baby-age').textContent = p.dob ? ageLabel(ageInDays(p.dob)) : 'Add date of birth';
-  document.title = `${p.babyName} · DadBuddy`;
-  $('#who-chip').innerHTML = `<span class="avatar sm ${state.who}">${WHO_NAME[state.who][0]}</span>${WHO_NAME[state.who]}`;
+  $('#greeting').textContent = `${greetingFor(new Date().getHours())}, ${WHO_NAME[state.who]}`;
+  $('#baby-line').textContent = babyLine(p);
+  document.title = p.babyName === 'Baby' ? 'DadBuddy' : `${p.babyName} – DadBuddy`;
+  $('#who-chip').innerHTML = `<span class="avatar sm ${state.who}">${WHO_NAME[state.who][0]}</span><span class="who-name">${WHO_NAME[state.who]}</span>`;
+  $('#who-chip').setAttribute('aria-label', `Signed in as ${WHO_NAME[state.who]}. Switch person`);
+}
+
+// A friendly hello that knows what time it is. After 9pm it's the night shift.
+function greetingFor(h) {
+  if (h >= 5 && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  if (h >= 17 && h < 21) return 'Good evening';
+  return 'Night shift';
+}
+function babyLine(p) {
+  const named = p.babyName && p.babyName !== 'Baby';
+  if (!p.dob) return named ? `Add ${p.babyName}'s date of birth` : "Add your baby's name and birthday";
+  const age = ageLabel(ageInDays(p.dob));
+  const who = named ? p.babyName : 'Your baby';
+  if (age === 'Born today') return `${who} was born today`;
+  if (age === 'Due soon') return `${who} is due soon`;
+  return `${who} is ${age}`;
+}
+function renderLoginTitle() {
+  const n = state.profile.babyName;
+  $('#login-title').textContent = n && n !== 'Baby' ? `Hi! Who's looking after ${n}?` : "Hi! Who's on baby duty?";
 }
 
 function syncText() {
@@ -960,7 +982,7 @@ function showLogin() {
   state.who = null;
   $('#app').hidden = true;
   $('#login').hidden = false;
-  $('#login-baby').textContent = `${state.profile.babyName}'s log`;
+  renderLoginTitle();
 }
 
 async function login(who) {
@@ -1107,7 +1129,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
     // Best effort: show the baby's name on the sign-in screen.
     net('GET', '/api/me', null, 3000).then((me) => {
       state.profile = { babyName: me.babyName, dob: me.dob, birthWeightKg: me.birthWeightKg };
-      if (!state.who) $('#login-baby').textContent = `${state.profile.babyName}'s log`;
+      if (!state.who) renderLoginTitle();
     }, () => {});
     return;
   }

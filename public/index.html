@@ -30,22 +30,26 @@
   <!-- ============================================================ sign in -->
   <section id="login" class="login" hidden>
     <div class="login-inner">
-      <svg class="login-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-moon"/></svg>
-      <p class="eyebrow" id="login-baby">DadBuddy</p>
-      <h1>Who's on duty?</h1>
+      <img class="login-logo" src="icon.svg" alt="" width="96" height="96">
+      <p class="brand-name">DadBuddy</p>
+      <h1 id="login-title">Hi! Who's on baby duty?</h1>
+      <p class="login-sub">Tap your name to start.</p>
       <div class="login-buttons">
         <button class="who-btn" data-who="mum"><span class="avatar mum">M</span><span>Mum</span></button>
         <button class="who-btn" data-who="dad"><span class="avatar dad">D</span><span>Dad</span></button>
       </div>
-      <p class="muted small">This phone remembers you. Tap your name at the top of the app to switch.</p>
+      <p class="muted small">This phone will remember you. To switch, tap your picture at the top of the app.</p>
     </div>
   </section>
 
   <div id="app" hidden>
     <header class="topbar">
-      <button id="profile-btn" class="baby-id" aria-label="Baby profile and settings">
-        <span id="baby-name" class="baby-name">Baby</span>
-        <span id="baby-age" class="baby-age"></span>
+      <button id="profile-btn" class="hello" aria-label="Baby profile">
+        <img class="hello-logo" src="icon.svg" alt="" width="44" height="44">
+        <span class="hello-text">
+          <span id="greeting" class="greeting">Hello</span>
+          <span id="baby-line" class="baby-line"></span>
+        </span>
       </button>
       <div class="topbar-right">
         <button id="who-chip" class="who-chip" aria-label="Switch person"></button>

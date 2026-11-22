@@ -114,13 +114,15 @@ svg { width: 1em; height: 1em; flex: none; }
 /* ---------------------------------------------------------------- sign in */
 .login { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
 .login-inner { width: 100%; max-width: 420px; text-align: center; }
-.login-mark { width: 44px; height: 44px; color: var(--feed); margin-bottom: 10px; }
-.login h1 { font-size: 30px; margin: 0 0 28px; }
+.login-logo { width: 96px; height: 96px; border-radius: 26px; box-shadow: var(--shadow); display: block; margin: 0 auto 14px; }
+.brand-name { margin: 0 0 18px; font-size: 18px; font-weight: 800; color: var(--ink-2); }
+.login h1 { font-size: 30px; line-height: 1.15; letter-spacing: -.02em; margin: 0 0 6px; }
+.login-sub { margin: 0 0 26px; color: var(--ink-2); font-size: 17px; }
 .login-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
 .who-btn {
   display: grid; justify-items: center; gap: 12px; padding: 28px 12px 22px;
-  border-radius: 24px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
-  font-size: 20px; font-weight: 700; transition: transform .1s;
+  border-radius: var(--radius); border: 1px solid var(--card-border); background: var(--surface); box-shadow: var(--shadow);
+  font-size: 21px; font-weight: 800; transition: transform .1s;
 }
 .who-btn:active { transform: scale(.97); }
 .avatar {
@@ -139,18 +141,27 @@ svg { width: 1em; height: 1em; flex: none; }
   padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
   position: sticky; top: 0; z-index: 5; background: var(--bg);
 }
-.baby-id { background: none; border: 0; padding: 2px 0; text-align: left; display: grid; min-width: 0; }
-.baby-name { font-size: 24px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.baby-age { font-size: 14px; color: var(--muted); font-weight: 600; }
+.hello { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 2px 0; text-align: left; min-width: 0; }
+.hello-logo { width: 44px; height: 44px; border-radius: 13px; flex: none; }
+.hello-text { display: grid; min-width: 0; }
+.greeting { font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.baby-line { font-size: 15px; color: var(--ink-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-right { display: flex; gap: 8px; align-items: center; flex: none; }
 .icon-btn {
-  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
-  display: grid; place-items: center; color: var(--ink-2); font-size: 20px;
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--card-border); background: var(--surface);
+  display: grid; place-items: center; color: var(--ink-2); font-size: 20px; box-shadow: var(--shadow);
 }
 .who-chip {
   display: flex; align-items: center; gap: 8px; min-height: 44px;
-  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
-  padding: 4px 14px 4px 5px; font-weight: 700; font-size: 15px;
+  border: 1px solid var(--card-border); background: var(--surface); border-radius: 999px; box-shadow: var(--shadow);
+  padding: 4px 14px 4px 5px; font-weight: 800; font-size: 15px;
+}
+.who-chip .avatar.sm { width: 34px; height: 34px; font-size: 15px; }
+@media (max-width: 420px) {
+  .who-chip { padding: 4px; }
+  .who-chip .who-name { display: none; }
+  .hello-logo { width: 38px; height: 38px; border-radius: 11px; }
+  .greeting { font-size: 20px; }
 }
 
 /* Sync status: only shown away from home or while changes wait to go up. */
