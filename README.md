@@ -7,6 +7,9 @@
 A feed, nappy and sleep tracker that installs on your phones like an app. It works anywhere, and syncs between Mum's and Dad's phones over your **home Wi-Fi**. The checks and alerts follow NHS guidance.
 See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source and its review date.
 
+<p align="center"><img src="docs/screenshots.png" width="860" alt="Three DadBuddy screens: Today with a sleep timer running, Trends with a 24-hour timeline and 7-day charts, and the dim, warm Night light theme"></p>
+<p align="center"><sub>Today, Trends and the Night light theme, with demo data for a 12-day-old.</sub></p>
+
 ## What it does
 
 - **Sign in** as Mum or Dad with one tap. Each phone remembers who it is.
@@ -24,6 +27,7 @@ See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source 
 - **Trends:** 24-hour timeline, 7-day charts, daily table, weight and temperature history.
 - **History** with filters, editing, deleting, Undo, and CSV export (made on the phone, so it works anywhere).
 - **Help:** NHS urgent-help signs, fever, feeding, nappies, safe sleep, formula safety and vitamin D, all linked to nhs.uk.
+- **Friendly by design:** says good morning (or "Night shift, Dad" after 9pm), shows big one-tap buttons with round icons, and uses one colour per thing: orange for feeds, blue for nappies, green for sleep.
 - **Themes:** Light, Dark and a dim, warm **Night light**. Auto switches to Night light from 21:00 to 07:00.
 - UK English, 24-hour times.
 
@@ -84,6 +88,13 @@ Phones only let a web app install and work offline over HTTPS. On first start, t
 
 - Data lives in `data\baby.db` (SQLite). Older databases are upgraded automatically, with a backup in `data\backups\` first.
 - Back up the `data` folder from time to time.
+
+## Design
+
+- **Logo:** a sunny yellow D whose bowl hugs a sleeping baby, on blueberry.
+- **Palette:** Cloud `#F2F4FA`, Blueberry `#232A5C` and Sunshine `#FFC93C`. Sunshine marks the one thing to tap, always with Blueberry text.
+- **Type:** the phone's rounded system font, so the app stays fully offline.
+- **Contrast:** every text pair meets WCAG AA (4.5:1) in Light, Dark and Night light.
 
 ## Notes
 

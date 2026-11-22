@@ -108,6 +108,27 @@ with the decision taken for each finding. Each guidance figure in the app links 
 31. **Changing the baby profile needs home Wi-Fi,** so the two phones never disagree about the date of birth, which the age-based
     checks depend on.
 
+### v4: DadBuddy name, logo and friendlier interface
+
+32. **Name and logo.** "DadBuddy": the app is a buddy for the parent on the night shift. The logo is a yellow D whose bowl hugs a
+    sleeping baby. It's one simple shape, so it still reads at 48 px and as a maskable Android icon.
+33. **Palette.** The v2 cream and terracotta looked like countless other apps. DadBuddy uses Cloud, Blueberry and Sunshine.
+    Sunshine marks the one thing to tap (the main button and the current tab), always with Blueberry text (8.8:1).
+    Feed, nappy and sleep keep their validated chart colours, so every screen colour-codes them the same way.
+    Night light keeps its warm amber with no blue-white.
+34. **Friendlier language.**
+    - The header greets the parent by time of day ("Good evening, Mum", or "Night shift, Dad" after 9pm).
+    - It says the baby's age as a sentence ("Ada is 12 days old").
+    - Sign-in asks "Hi! Who's looking after Ada?"
+    - Empty states say what to do next.
+    - Headings are sentence case, with no all-caps labels.
+35. **Easier tapping.** The log buttons are taller (92–96 px), with the icon in a round bubble of the category colour.
+    On phones the status cards go two-up, so times like "2h 07m ago" never wrap.
+36. **First run.** A sunny card asks you to "Tell DadBuddy about your little one". The checks need the date of birth to match
+    NHS age bands, so this is the most important thing to set.
+37. **Contrast** is re-measured for every new pair in all three themes. Every text pair is at least 4.5:1 and every icon at least 3:1.
+    The setup page's green step badge got a dark tick in Dark mode, because white on that green measured 2.1:1.
+
 ### Verification
 - `npm test`: 16 tests covering each NHS rule (age bands, data-coverage gating, 30-minute feed grouping, formula-only babies,
   vitamin D over 500 ml, temperature by age, re-checks, 12-hour no-wet, pale poo and dark pee, black poo by age,
