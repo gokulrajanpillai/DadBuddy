@@ -107,8 +107,20 @@ Phones only let a web app install and work offline over HTTPS. On first start, t
 - **Type:** the phone's rounded system font, so the app stays fully offline.
 - **Contrast:** every text pair meets WCAG AA (4.5:1) in Light, Dark and Night light.
 
+## If a phone can't open DadBuddy
+
+Work through these in order. `http://<PC-IP>/setup` is the quickest test, where `<PC-IP>` is the address the server prints when it starts.
+
+1. **The page just keeps loading or "took too long to respond".** The phone can't reach the PC.
+   - **Guest Wi-Fi:** routers often set extra networks up as guest networks, which keep devices apart. In the router's wireless settings, untick **Guest WLAN** (or turn off "AP/client isolation") for the networks your phones and PC use.
+   - **A VPN on the phone** can send home addresses into the tunnel. Turn it off at home, or allow local network access in its settings.
+   - **This PC's network is Public:** run `setup-network.ps1` again as administrator after joining a new Wi-Fi network.
+2. **The IP works but `baby.local` doesn't.** Some phones (for example Android 10 and older) can't look up `.local` names. Use `https://<PC-IP>` on that phone, and reserve the PC's address in the router so it doesn't change.
+3. **iPhone:** do the setup in **Safari**. Chrome on iPhone can't install the certificate or add a home-screen app, and reminders only work in the home-screen app.
+4. Still stuck? Start the server with `LOG_REQUESTS=1` to see each request a phone makes and what it got back.
+
 ## Notes
 
 - **Android and `.local` names:** some Android phones can't open them. Use `http://<PC-IP>/setup` and `https://<PC-IP>` instead, where `<PC-IP>` is the address the server prints when it starts (it is in the certificate). Reserve this PC's IP in the router (a DHCP reservation) so it doesn't change.
 - **iPhone storage:** Safari can clear a website's storage after 7 days without a visit; apps added to the home screen are exempt. Use the installed app. Anything already synced is safe on the PC either way.
-- **Settings** come from environment variables: `PORT` (80), `HTTPS_PORT` (443, or 0 for HTTP only), `MDNS_NAME` (`baby`), `LAN_IP` (auto), `DATA_DIR` (`./data`), `OPENSSL` (path, if not found automatically), `PUSH_CONTACT` (the contact address push services are given; defaults to this project's page, never an email), `REMINDER_EVERY_MS` (30000).
+- **Settings** come from environment variables: `PORT` (80), `HTTPS_PORT` (443, or 0 for HTTP only), `MDNS_NAME` (`baby`), `LAN_IP` (auto), `DATA_DIR` (`./data`), `OPENSSL` (path, if not found automatically), `PUSH_CONTACT` (the contact address push services are given; defaults to this project's page, never an email), `REMINDER_EVERY_MS` (30000), `LOG_REQUESTS` (set to 1 to print every request).

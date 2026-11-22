@@ -72,6 +72,8 @@
   <h1>Let's set up DadBuddy on this phone</h1>
   <p class="lead">This takes about two minutes, once per phone. Afterwards DadBuddy works like an app: you can log anywhere, and it syncs with the other phone when you're both on home Wi-Fi.</p>
 
+  <p class="status wait" id="not-safari" hidden>On iPhone, certificates and home-screen apps only install from <b>Safari</b>. Open <b id="this-address"></b> in Safari and continue there.</p>
+
   <div class="tabs" role="group" aria-label="Phone type">
     <button type="button" data-os="ios">iPhone</button>
     <button type="button" data-os="android">Android</button>
@@ -146,6 +148,11 @@
       b.addEventListener('click', function () { setOs(b.getAttribute('data-os')); });
     });
     setOs(os);
+    // Chrome, Firefox and Edge on iPhone can't install the certificate or add a home-screen app.
+    if (os === 'ios' && /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)) {
+      document.getElementById('this-address').textContent = location.host + '/setup';
+      document.getElementById('not-safari').hidden = false;
+    }
 
     var stay = /[?&]stay\b/.test(location.search);
     var host = location.hostname;

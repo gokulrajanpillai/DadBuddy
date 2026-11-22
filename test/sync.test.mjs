@@ -189,6 +189,7 @@ test('on plain HTTP, phones are sent to setup or HTTPS; the certificate download
   assert.equal(res.headers.location, `https://synctest.local:${httpsPort}/history`);
   assert.equal((await asPhone('/', 'synctest.local')).headers.location, '/setup');
   assert.equal((await asPhone('/setup', 'synctest.local')).statusCode, 200);
+  assert.equal((await asPhone('/icon.svg', 'synctest.local')).statusCode, 200, 'the setup page logo loads before the certificate is trusted');
   const evil = await asPhone('/x', 'evil.example');
   assert.ok(evil.headers.location.startsWith('https://synctest.local'), 'never redirects to a foreign host');
   const cert = await fetch(base + '/baby-log-ca.crt');

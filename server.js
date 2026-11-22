@@ -580,6 +580,8 @@ async function serveStatic(req, res, url) {
 }
 
 let tls = null; // { key, cert, caCertPath } once the home certificate exists
+// What plain HTTP serves to phones before they trust the home certificate: the setup page and its logo.
+const HTTP_PATHS = new Set(['/setup', '/icon.svg']);
 let httpsServer = null;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -592,6 +594,13 @@ function ownHost(req) {
 async function handle(req, res, secure) {
   const url = new URL(req.url, 'http://local');
   const p = url.pathname;
+  // LOG_REQUESTS=1 prints each request and its result: handy when a phone can't reach the app.
+  if (process.env.LOG_REQUESTS) {
+    const t0 = Date.now(), from = req.socket.remoteAddress;
+    console.log(`> ${from} ${secure ? 'https' : 'http'} ${req.method} ${req.headers.host}${req.url} [${req.headers['user-agent'] || ''}]`);
+    res.on('finish', () => console.log(`< ${from} ${res.statusCode} ${req.url} ${Date.now() - t0}ms`));
+    res.on('close', () => { if (!res.writableFinished) console.log(`x ${from} closed before the reply finished: ${req.url}`); });
+  }
   try {
     // Lets the setup page (on http) check whether this phone trusts the https certificate yet.
     if (p === '/api/ping') {
@@ -607,7 +616,7 @@ async function handle(req, res, secure) {
     // On phones, plain HTTP only hosts the setup page; the app itself is served over HTTPS
     // (needed to install it and use it offline). The PC itself can keep using http://localhost.
     const host = ownHost(req);
-    if (!secure && httpsServer && !LOCAL_HOSTS.has(host) && p !== '/setup') {
+    if (!secure && httpsServer && !LOCAL_HOSTS.has(host) && !HTTP_PATHS.has(p)) {
       const target = p === '/' ? '/setup' : `https://${host}${HTTPS_PORT === 443 ? '' : `:${HTTPS_PORT}`}${p}${url.search}`;
       return send(res, 302, 'Moved', { Location: target });
     }
