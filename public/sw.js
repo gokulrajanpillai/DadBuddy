@@ -4,7 +4,7 @@
 // arrives the next time the app is opened at home. Entries never pass through here:
 // /api/ requests always go to the network (the app keeps its data in IndexedDB).
 
-const CACHE = 'dadbuddy-v5';
+const CACHE = 'dadbuddy-v6';
 const SHELL = [
   '/',
   '/index.html',
@@ -59,4 +59,28 @@ self.addEventListener('fetch', (ev) => {
       });
     })
   );
+});
+
+// Reminders sent by the home computer (see reminders.js). Tapping one opens DadBuddy.
+self.addEventListener('push', (ev) => {
+  let d = {};
+  try { d = ev.data ? ev.data.json() : {}; } catch {}
+  ev.waitUntil(self.registration.showNotification(d.title || 'DadBuddy', {
+    body: d.body || '',
+    tag: d.tag || 'dadbuddy',
+    renotify: true,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: d.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (ev) => {
+  ev.notification.close();
+  ev.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = all.find((c) => new URL(c.url).origin === self.location.origin);
+    if (open) return open.focus();
+    return self.clients.openWindow(ev.notification.data?.url || '/');
+  })());
 });

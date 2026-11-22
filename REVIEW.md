@@ -147,6 +147,22 @@ with the decision taken for each finding. Each guidance figure in the app links 
     paracetamol is usually best; codeine, decongestant tablets, aspirin for pain and herbal remedies aren't recommended.
 43. **The medicine list changes only at home**, like the baby profile, so both phones always agree on what each dose means.
 
+### v5: reminders
+44. **Reminders are opt-in, per phone, per kind.** Dad may want nappy checks, Mum her medicines. Nothing is on until a
+    phone turns it on, apart from Mum's medicine reminders being pre-ticked on Mum's phone.
+45. **The feed reminder is worded as a nudge, not a schedule** ("3 hours since Ada's last feed… watch for early hunger
+    cues"), because the NHS advises responsive feeding. The interval is counted from the start of the last feed, matching
+    how the checks measure time between feeds, and it stays quiet while a breastfeed timer is running.
+46. **Each reminder is sent once** (its key changes only when something new is logged), and one that became due more than
+    2 hours ago is skipped, so turning reminders on, or the PC waking from sleep, never sends a pile of stale alerts.
+47. **Privacy.** Push is the only way a web app can reach a locked phone, and it goes through Apple's or Google's push
+    service. Messages are encrypted to the phone (RFC 8291), signed with a key that stays on the PC (RFC 8292), and the
+    contact given to push services is the project page, never a parent's email. The server only sends to known push
+    services, so a subscription can't make the PC call any other address.
+48. **Honest about the limits:** the sheet says the PC must be on and online, and that the other phone's entries made away
+    from home count only once it's back. The vitamin D reminder uses the same check as Today, so it stays quiet for babies
+    on more than 500 ml of formula.
+
 ### Verification
 - `npm test`: 16 tests covering each NHS rule (age bands, data-coverage gating, 30-minute feed grouping, formula-only babies,
   vitamin D over 500 ml, temperature by age, re-checks, 12-hour no-wet, pale poo and dark pee, black poo by age,
@@ -168,6 +184,15 @@ with the decision taken for each finding. Each guidance figure in the app links 
   - Back home: the queued changes went up, the other phone's entries came down, and the overlapping timer was ended.
   - No console errors.
   - Chrome offered to install the app.
+
+- v5: `npm test` has 43 tests, adding:
+  - medicine validation, next-dose times, the 24-hour limit, set times with early and missed doses
+  - medicines and doses through the sync API, and the v3 → v4 upgrade
+  - Web Push encryption reproducing the RFC 8291 example byte for byte, and VAPID tokens checked with the public key
+  - which reminders are due (feed, nappy, medicines, vitamin D, the 2-hour window)
+  - end to end: a phone subscribes, a feed is logged, and one encrypted reminder reaches a local fake push service, where
+    the test decrypts it as a phone would; a 410 from the push service forgets that phone
+- v5 browser check with demo data: medicine cards, the "log another dose?" sheet, presets, and the reminders sheet. No console errors.
 
 ### Kept from v1
 One-tap logging with Undo, live sync between phones, editing and deleting any entry, CSV export,

@@ -560,3 +560,17 @@ input:focus, textarea:focus { outline: 3px solid var(--nappy); outline-offset: 1
 .preset-note { margin: -4px 0 0; font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
 .check-field.remind input { accent-color: var(--ok); }
 .chips .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* ---------------------------------------------------------------- reminders */
+.rem-status:empty { display: none; }
+.rem-status { display: grid; gap: 10px; background: var(--sun-soft); border-radius: 18px; padding: 14px; }
+.rem-status p { margin: 0; color: var(--ink-2); font-size: 15px; }
+.rem-status .primary-btn { justify-self: start; }
+.rem-options { display: grid; gap: 12px; }
+.rem-row { display: grid; gap: 4px; padding: 10px 12px; border-radius: 16px; background: var(--surface-2); }
+.rem-row .check-field { font-size: 17px; font-weight: 800; }
+.rem-row .check-field input { accent-color: var(--ok); }
+.rem-detail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ink-2); font-size: 15px; }
+.rem-detail select, .rem-detail input { width: auto; min-height: 40px; padding: 6px 10px; }
+.text-btn.inline { padding: 0; font-size: inherit; min-height: 0; }
+@media (max-width: 420px) { .topbar-right { gap: 6px; } }

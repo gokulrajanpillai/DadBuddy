@@ -53,6 +53,7 @@
       </button>
       <div class="topbar-right">
         <button id="who-chip" class="who-chip" aria-label="Switch person"></button>
+        <button id="remind-btn" class="icon-btn" aria-label="Reminders" data-open="reminders"><svg><use href="#i-bell"/></svg></button>
         <button id="settings-btn" class="icon-btn" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
       </div>
     </header>
@@ -429,6 +430,11 @@
       </div>
 
       <div class="field">
+        <span>Reminders</span>
+        <button type="button" class="ghost-btn small" data-open="reminders">Reminders on this phone</button>
+      </div>
+
+      <div class="field">
         <span>Mum's medicines</span>
         <button type="button" class="ghost-btn small" data-open="meds">Manage Mum's medicines</button>
       </div>
@@ -506,6 +512,48 @@
     </form>
   </dialog>
 
+  <!-- ============================================================ reminders -->
+  <dialog id="reminders" class="sheet" aria-labelledby="rem-title">
+    <form id="rem-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="rem-title">Reminders on this phone</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <div id="rem-status" class="rem-status"></div>
+      <div id="rem-options" class="rem-options" hidden>
+        <div class="rem-row">
+          <label class="check-field"><input type="checkbox" name="feed_on"><span>Feeds</span></label>
+          <label class="rem-detail">After <select name="feed_hours" aria-label="Hours after the last feed started">
+            <option value="2">2 hours</option><option value="2.5">2½ hours</option><option value="3">3 hours</option><option value="3.5">3½ hours</option><option value="4">4 hours</option>
+          </select> since the last feed started</label>
+          <p class="hint">A nudge, not a schedule. The NHS advises feeding responsively, whenever your baby shows hunger cues.</p>
+        </div>
+        <div class="rem-row">
+          <label class="check-field"><input type="checkbox" name="nappy_on"><span>Nappy checks</span></label>
+          <label class="rem-detail">After <select name="nappy_hours" aria-label="Hours after the last change">
+            <option value="2">2 hours</option><option value="3">3 hours</option><option value="4">4 hours</option>
+          </select> since the last change</label>
+        </div>
+        <div class="rem-row">
+          <label class="check-field"><input type="checkbox" name="meds_on"><span>Mum's medicines</span></label>
+          <p class="hint">When a dose is due, for each medicine set to remind. <button type="button" class="text-btn inline" data-open="meds">Choose which</button></p>
+        </div>
+        <div class="rem-row">
+          <label class="check-field"><input type="checkbox" name="vitd_on"><span>Vitamin D drops</span></label>
+          <label class="rem-detail">At <input type="time" name="vitd_at" aria-label="Vitamin D reminder time"> if they haven't been given yet</label>
+        </div>
+        <p class="hint">Your home computer works out what's due from what has synced, so it needs to be on and online. Something logged on the other phone while it's away from home counts once that phone is back.</p>
+        <div class="sheet-actions">
+          <button type="button" class="ghost-btn small" id="rem-test">Send a test</button>
+          <span class="spacer"></span>
+          <button type="button" class="text-btn" id="rem-off">Turn off on this phone</button>
+        </div>
+      </div>
+      <p class="form-error" id="rem-error" role="alert" hidden></p>
+      <p class="footnote">Reminders travel from your home computer through Apple's or Google's push service, encrypted so only this phone can read them. Nothing from your log is stored outside your home.</p>
+    </form>
+  </dialog>
+
   <dialog id="dose-check" class="sheet" aria-labelledby="dose-check-title">
     <form method="dialog">
       <div class="sheet-head">
@@ -547,6 +595,7 @@
       <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5M12 17v.3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
       <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
       <symbol id="i-pill" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.2" y="8.4" width="17.6" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/><path d="m9.5 9.5 5 5"/></g></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></g></symbol>
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     </defs>
   </svg>

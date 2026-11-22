@@ -5,6 +5,7 @@
 // - Offline-first sync: phones keep their own copy and push/pull changes when they're home
 // - mDNS responder so devices on the LAN can open baby.local
 // - Server-sent events so every open phone pulls changes when someone logs something
+// - Reminders (feeds, nappy checks, Mum's medicines, vitamin D) as encrypted Web Push notifications
 
 import http from 'node:http';
 import https from 'node:https';
@@ -18,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import makeMdns from 'multicast-dns';
 import { ensureCerts } from './certs.js';
+import { isPushEndpoint, loadVapid, sendPush, unb64u } from './push.js';
+import { cleanPrefs, dueReminders } from './reminders.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 80);
@@ -27,6 +30,11 @@ const PC_HOST = `${os.hostname().toLowerCase()}.local`;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const CERT_DIR = path.join(DATA_DIR, 'certs');
+const PUSH_DIR = path.join(DATA_DIR, 'push');
+// Push services ask senders for a contact (RFC 8292). The project page, never anyone's email.
+const PUSH_CONTACT = process.env.PUSH_CONTACT || 'https://github.com/gokulrajanpillai/DadBuddy';
+const PUSH_TEST_ENDPOINT = process.env.PUSH_TEST_ENDPOINT || ''; // tests only: a local fake push service
+const REMINDER_EVERY_MS = Number(process.env.REMINDER_EVERY_MS || 30_000);
 
 // Rules shared with the phones (public/*.js), loaded into this process.
 function loadShared(file) {
@@ -36,6 +44,7 @@ function loadShared(file) {
 }
 const R = loadShared('rules.js');
 const MEDS = loadShared('meds.js');
+const GUIDANCE = loadShared('guidance.js');
 
 // ---------------------------------------------------------------- database
 
@@ -140,6 +149,17 @@ function migrate() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_events_start ON events (start_at)');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_uid ON events (uid)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_events_rev ON events (rev)');
+  // Phones that want reminders, and which reminders each has already been sent.
+  db.exec(`CREATE TABLE IF NOT EXISTS push_subs (
+    endpoint   TEXT PRIMARY KEY,
+    who        TEXT NOT NULL,
+    p256dh     TEXT NOT NULL,
+    auth       TEXT NOT NULL,
+    prefs      TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.exec('CREATE TABLE IF NOT EXISTS push_sent (endpoint TEXT NOT NULL, key TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (endpoint, key))');
   db.exec('PRAGMA user_version = 4');
 }
 migrate();
@@ -159,6 +179,16 @@ const q = {
   update: db.prepare(`UPDATE events SET kind = ?, subtype = ?, start_at = ?, end_at = ?, amount_ml = ?, value = ?, poo = ?, pee = ?,
                       note = ?, med = ?, updated_at = ?, rev = ? WHERE uid = ?`),
   meds: db.prepare('SELECT * FROM meds ORDER BY active DESC, created_at'),
+  recent: db.prepare('SELECT * FROM events WHERE deleted_at IS NULL AND start_at > ? ORDER BY start_at'),
+  subs: db.prepare('SELECT * FROM push_subs'),
+  subByEndpoint: db.prepare('SELECT * FROM push_subs WHERE endpoint = ?'),
+  subUpsert: db.prepare(`INSERT INTO push_subs (endpoint, who, p256dh, auth, prefs, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+                         ON CONFLICT(endpoint) DO UPDATE SET who = excluded.who, p256dh = excluded.p256dh, auth = excluded.auth,
+                         prefs = excluded.prefs, updated_at = excluded.updated_at`),
+  subDelete: db.prepare('DELETE FROM push_subs WHERE endpoint = ?'),
+  sentHas: db.prepare('SELECT 1 FROM push_sent WHERE endpoint = ? AND key = ?'),
+  sentAdd: db.prepare('INSERT OR IGNORE INTO push_sent (endpoint, key, at) VALUES (?, ?, ?)'),
+  sentPrune: db.prepare('DELETE FROM push_sent WHERE at < ?'),
   medById: db.prepare('SELECT * FROM meds WHERE id = ?'),
   medInsert: db.prepare(`INSERT INTO meds (id, name, dose, schedule, every_h, max_day, times, remind, active, created_at, updated_at)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
@@ -247,6 +277,67 @@ function inTransaction(fn) {
     db.exec('ROLLBACK');
     throw err;
   }
+}
+
+// ---------------------------------------------------------------- reminders (Web Push)
+
+let vapid = null;
+try {
+  vapid = loadVapid(PUSH_DIR);
+} catch (err) {
+  console.error('Reminders are off: could not create the push keys.', err.message);
+}
+const timeFmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+const fmtTime = (t) => timeFmt.format(t);
+
+async function deliver(sub, message) {
+  const status = await sendPush(sub, message, { vapid, subject: PUSH_CONTACT, topic: message.tag });
+  if (status === 404 || status === 410) {
+    q.subDelete.run(sub.endpoint); // the phone unsubscribed or was reset
+    console.log(`Reminders: a ${sub.who === 'mum' ? "Mum's" : "Dad's"} phone has unsubscribed; removed it`);
+  } else if (status >= 400) {
+    console.warn(`Reminders: the push service answered ${status}`);
+  }
+  return status;
+}
+
+let checking = false;
+async function runReminders(now = Date.now()) {
+  if (!vapid || checking) return;
+  const subs = q.subs.all();
+  if (!subs.length) return;
+  checking = true;
+  try {
+    const events = q.recent.all(now - 3 * 86_400_000);
+    const ctx = {
+      events, meds: meds(), profile: profile(), now, fmtTime, babyName: profile().babyName,
+      feedSessions: GUIDANCE.feedSessions, evaluate: GUIDANCE.evaluate, medStatus: MEDS.medStatus,
+    };
+    for (const sub of subs) {
+      for (const r of dueReminders({ ...ctx, prefs: JSON.parse(sub.prefs) })) {
+        if (q.sentHas.get(sub.endpoint, r.key)) continue;
+        try {
+          await deliver(sub, { title: r.title, body: r.body, tag: r.tag, url: '/' });
+          q.sentAdd.run(sub.endpoint, r.key, now);
+        } catch (err) {
+          console.warn('Reminders: could not reach the push service (is this PC online?)', err.message); // tried again next round
+        }
+      }
+    }
+    q.sentPrune.run(now - 7 * 86_400_000);
+  } finally {
+    checking = false;
+  }
+}
+setInterval(() => runReminders().catch((err) => console.error('Reminders:', err)), REMINDER_EVERY_MS).unref();
+
+function parseSubscription(b) {
+  const sub = b && b.subscription;
+  const endpoint = sub?.endpoint, p256dh = sub?.keys?.p256dh, auth = sub?.keys?.auth;
+  if (!isPushEndpoint(endpoint, PUSH_TEST_ENDPOINT)) throw new HttpError(400, "That isn't a push service DadBuddy knows");
+  if (typeof p256dh !== 'string' || unb64u(p256dh).length !== 65 || typeof auth !== 'string' || unb64u(auth).length !== 16)
+    throw new HttpError(400, 'Invalid subscription keys');
+  return { endpoint, p256dh, auth };
 }
 
 // ---------------------------------------------------------------- live updates (SSE)
@@ -398,6 +489,42 @@ async function api(req, res, url) {
     }
     broadcast();
     return send(res, 200, profile());
+  }
+
+  // Reminders: each phone subscribes with its own choices.
+  if (p === '/api/push' && m === 'GET') {
+    if (!vapid) throw new HttpError(503, 'Reminders are off on the home computer');
+    const endpoint = url.searchParams.get('endpoint');
+    const sub = endpoint ? q.subByEndpoint.get(endpoint) : null;
+    return send(res, 200, { publicKey: vapid.publicKey, subscribed: !!sub, prefs: sub ? JSON.parse(sub.prefs) : cleanPrefs({}, who) });
+  }
+  if (p === '/api/push/subscribe' && m === 'POST') {
+    if (!vapid) throw new HttpError(503, 'Reminders are off on the home computer');
+    const b = await readJson(req);
+    const sub = parseSubscription(b);
+    const prefs = cleanPrefs(b.prefs, who);
+    const now = Date.now();
+    q.subUpsert.run(sub.endpoint, who, sub.p256dh, sub.auth, JSON.stringify(prefs), now, now);
+    setTimeout(() => runReminders().catch(() => {}), 1000);
+    return send(res, 200, { subscribed: true, prefs });
+  }
+  if (p === '/api/push/unsubscribe' && m === 'POST') {
+    const { endpoint } = await readJson(req);
+    if (typeof endpoint === 'string') q.subDelete.run(endpoint);
+    return send(res, 200, { subscribed: false });
+  }
+  if (p === '/api/push/test' && m === 'POST') {
+    const { endpoint } = await readJson(req);
+    const sub = typeof endpoint === 'string' ? q.subByEndpoint.get(endpoint) : null;
+    if (!sub || !vapid) throw new HttpError(404, 'Turn on reminders on this phone first');
+    let status;
+    try {
+      status = await deliver(sub, { title: 'DadBuddy reminders are on', body: 'This is how a reminder will look on this phone.', tag: 'test', url: '/' });
+    } catch {
+      throw new HttpError(502, "The home computer couldn't reach the push service. Is it online?");
+    }
+    if (status >= 400) throw new HttpError(502, `The push service refused the message (${status})`);
+    return send(res, 200, { sent: true });
   }
 
   // Mum's medicines: added and changed at home (like the baby profile), so both phones agree.

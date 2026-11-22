@@ -18,6 +18,7 @@ See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source 
 - **Sleep timer.** Starting a feed ends a sleep and the other way round. Safe-sleep reminder while asleep.
 - **Temperature** (digital, under the arm), **weight** (kg, change since birth weight) and **vitamin D drops**.
 - **Mum's medicines:** add painkillers, vitamins or anything she's been given (with NHS-based starting points for paracetamol, ibuprofen and vitamin D), then tap to log a dose. Each card shows when the last dose was, how many in 24 hours, and when the next one is allowed or due. Logging a dose early, or over the 24-hour limit you set, asks first.
+- **Reminders** on each phone, even with the app closed: a feed nudge a chosen number of hours after the last feed started, nappy checks, Mum's medicines when a dose is due, and the baby's vitamin D drops if they haven't been given. Each phone picks its own (tap the bell).
 - **Today's checks**, based on age and NHS guidance: feeds in 24h (8–12 or more in the first weeks),
   wet nappies (6 or more heavy from day 5), poos (2 or more from day 4), vitamin D, and sleep (information only).
 - **Alerts** with NHS wording and one-tap `tel:999` / `tel:111` links:
@@ -42,7 +43,15 @@ DadBuddy isn't a medical device. It records what you log and points to NHS advic
 - **If both phones change the same entry**, the most recent change wins. Deleted entries stay deleted.
 - **If both phones start a timer while apart**, the newer one keeps running and the older one is ended when the newer one started.
 - **The baby profile** (name, date of birth, birth weight) and **Mum's medicine list** can only be changed at home, so both phones stay in step. Doses can be logged anywhere.
-- The PC is the only server. Nothing leaves your home network.
+- The PC is the only server. Your log never leaves your home network.
+
+## How reminders work
+
+- Turn them on from the **bell** at the top of the app, on each phone that wants them, and choose which ones.
+- The home PC checks every 30 seconds what's due, from what has synced, and sends each reminder once. Logging the thing it's about clears it from the lock screen.
+- A web app can only wake a locked phone through the phone maker's push service (Apple's or Google's), so the PC needs to be on and online. Each message is end-to-end encrypted ([RFC 8291](https://www.rfc-editor.org/rfc/rfc8291)): the push service passes along ciphertext it can't read. It's a short note like "3 hours since Ada's last feed"; nothing else from your log goes out.
+- **iPhone:** iOS 16.4 or later, and only in the app added to the Home Screen. **Android:** Chrome works in the browser or the installed app.
+- If something was logged on the other phone while it was away from home, the PC doesn't know yet, so a reminder can arrive for something already done. It says when the last one was, so you can tell.
 
 ## Run
 
@@ -88,6 +97,7 @@ Phones only let a web app install and work offline over HTTPS. On first start, t
 ## Data and backups
 
 - Data lives in `data\baby.db` (SQLite). Older databases are upgraded automatically, with a backup in `data\backups\` first.
+- `data\push\vapid.json` is the key that signs reminders. Keep it private, like the certificate key; if it's lost, each phone just turns reminders on again.
 - Back up the `data` folder from time to time.
 
 ## Design
@@ -101,4 +111,4 @@ Phones only let a web app install and work offline over HTTPS. On first start, t
 
 - **Android and `.local` names:** some Android phones can't open them. Use `http://<PC-IP>/setup` and `https://<PC-IP>` instead, where `<PC-IP>` is the address the server prints when it starts (it is in the certificate). Reserve this PC's IP in the router (a DHCP reservation) so it doesn't change.
 - **iPhone storage:** Safari can clear a website's storage after 7 days without a visit; apps added to the home screen are exempt. Use the installed app. Anything already synced is safe on the PC either way.
-- **Settings** come from environment variables: `PORT` (80), `HTTPS_PORT` (443, or 0 for HTTP only), `MDNS_NAME` (`baby`), `LAN_IP` (auto), `DATA_DIR` (`./data`), `OPENSSL` (path, if not found automatically).
+- **Settings** come from environment variables: `PORT` (80), `HTTPS_PORT` (443, or 0 for HTTP only), `MDNS_NAME` (`baby`), `LAN_IP` (auto), `DATA_DIR` (`./data`), `OPENSSL` (path, if not found automatically), `PUSH_CONTACT` (the contact address push services are given; defaults to this project's page, never an email), `REMINDER_EVERY_MS` (30000).

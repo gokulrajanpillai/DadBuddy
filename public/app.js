@@ -146,6 +146,7 @@ async function saveEvent(fields, existing) {
   await Store.saveLocal(row, { op: 'upsert', uid: row.uid, by: row.by, created_at: row.created_at, updated_at: now, ...fieldsOf(row) });
   await load();
   sync();
+  clearReminder(row);
   return row;
 }
 
@@ -696,6 +697,148 @@ async function restartMed(id) {
   } catch (e) {
     toast(e.message);
   }
+}
+
+// ------------------------------------------------------------ reminders (push notifications)
+// The home computer decides what's due and sends it (server: reminders.js). This phone only
+// subscribes, picks which reminders it wants, and shows them (sw.js).
+
+const remDlg = $('#reminders');
+const rf = (n) => $('#rem-form').elements.namedItem(n);
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const b64uBytes = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+const swReady = () => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('The app is still installing. Try again in a moment.')), 5000))]);
+
+async function currentSub() {
+  if (!pushSupported()) return null;
+  try { return await (await swReady()).pushManager.getSubscription(); } catch { return null; }
+}
+function prefsFromForm() {
+  return {
+    feed: { on: rf('feed_on').checked, hours: Number(rf('feed_hours').value) },
+    nappy: { on: rf('nappy_on').checked, hours: Number(rf('nappy_hours').value) },
+    meds: { on: rf('meds_on').checked },
+    vitd: { on: rf('vitd_on').checked, at: rf('vitd_at').value || '10:00' },
+  };
+}
+function fillPrefs(p) {
+  rf('feed_on').checked = p.feed.on; rf('feed_hours').value = String(p.feed.hours);
+  rf('nappy_on').checked = p.nappy.on; rf('nappy_hours').value = String(p.nappy.hours);
+  rf('meds_on').checked = p.meds.on;
+  rf('vitd_on').checked = p.vitd.on; rf('vitd_at').value = p.vitd.at;
+}
+function remError(msg) {
+  const el = $('#rem-error');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+const homeOnly = (err) => (err.offline
+  ? "Reminders can only be turned on or changed at home, because your home computer sends them. Connect to your home Wi-Fi and try again."
+  : err.status === 401 ? 'Sign in again (tap your name at the top), then try again.' : err.message);
+
+async function openReminders() {
+  remError('');
+  if (!remDlg.open) remDlg.showModal();
+  const status = $('#rem-status'), options = $('#rem-options');
+  options.hidden = true;
+  if (!pushSupported()) {
+    status.innerHTML = isIOS() && !isStandalone()
+      ? '<p>On iPhone, reminders work in the installed app. In Safari tap <b>Share</b>, then <b>Add to Home Screen</b>. Open DadBuddy from your Home Screen and turn reminders on there.</p>'
+      : '<p>This browser can\'t show reminders. Use Chrome on Android, or the installed app on iPhone (iOS 16.4 or later).</p>';
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    status.innerHTML = '<p>Notifications are blocked for DadBuddy on this phone. Allow them in your phone\'s settings for this app, then come back here.</p>';
+    return;
+  }
+  const sub = await currentSub();
+  if (!sub) {
+    status.innerHTML = '<p>Get a nudge when a feed, a nappy check or one of Mum\'s medicines is due, even with the app closed. You choose which.</p><button type="button" class="primary-btn" id="rem-on">Turn on reminders</button>';
+    return;
+  }
+  status.innerHTML = '';
+  options.hidden = false;
+  const saved = await Store.getMeta('remPrefs');
+  if (saved) fillPrefs(saved);
+  try {
+    const r = await net('GET', `/api/push?endpoint=${encodeURIComponent(sub.endpoint)}`);
+    if (r.subscribed) fillPrefs(r.prefs);
+    else await saveReminders(sub, saved || r.prefs); // the home computer forgot this phone (for example, a new data folder)
+  } catch (err) {
+    remError(homeOnly(err));
+  }
+}
+
+async function saveReminders(sub, prefs) {
+  const r = await net('POST', '/api/push/subscribe', { subscription: sub.toJSON(), prefs });
+  fillPrefs(r.prefs);
+  await Store.setMeta('remPrefs', r.prefs);
+  return r;
+}
+
+async function turnOnReminders() {
+  remError('');
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return openReminders();
+    const { publicKey, prefs } = await net('GET', '/api/push');
+    const reg = await swReady();
+    const opts = { userVisibleOnly: true, applicationServerKey: b64uBytes(publicKey) };
+    let sub;
+    try {
+      sub = await reg.pushManager.subscribe(opts);
+    } catch {
+      // Subscribed before with another key (for example, the home computer's data folder was reset).
+      await (await reg.pushManager.getSubscription())?.unsubscribe();
+      sub = await reg.pushManager.subscribe(opts);
+    }
+    await saveReminders(sub, prefs);
+    await openReminders();
+    toast('Reminders are on. Choose which ones you want.');
+  } catch (err) {
+    remError(homeOnly(err));
+  }
+}
+
+let remTimer;
+$('#rem-form').addEventListener('change', () => {
+  clearTimeout(remTimer);
+  remTimer = setTimeout(async () => {
+    const sub = await currentSub();
+    if (!sub) return;
+    try {
+      await saveReminders(sub, prefsFromForm());
+      remError('');
+    } catch (err) {
+      remError(homeOnly(err));
+    }
+  }, 300);
+});
+$('#rem-test').addEventListener('click', async () => {
+  const sub = await currentSub();
+  if (!sub) return;
+  try {
+    await net('POST', '/api/push/test', { endpoint: sub.endpoint }, 20000);
+    toast('Test reminder sent. It should arrive in a few seconds.');
+  } catch (err) {
+    remError(homeOnly(err));
+  }
+});
+$('#rem-off').addEventListener('click', async () => {
+  const sub = await currentSub();
+  if (sub) {
+    net('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint }).catch(() => {});
+    await sub.unsubscribe().catch(() => {});
+  }
+  await openReminders();
+  toast('Reminders are off on this phone');
+});
+
+// Logging something closes the matching reminder, if it's still showing.
+function clearReminder(e) {
+  const tag = { feed: 'feed', nappy: 'nappy', vitd: 'vitd' }[e.kind] || (e.kind === 'med' ? `med-${e.med}` : null);
+  if (!tag || !pushSupported() || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.ready.then((reg) => reg.getNotifications({ tag })).then((ns) => ns.forEach((n) => n.close())).catch(() => {});
 }
 
 // ------------------------------------------------------------ trends
@@ -1276,7 +1419,9 @@ document.addEventListener('click', (ev) => {
   }
   if (t.closest('[data-setup-later]')) { storage.set('setupLater', true); return renderToday(); }
   if (t.closest('[data-open="settings"]')) return openSettings();
-  if (t.closest('[data-open="meds"]')) return openMeds();
+  if (t.closest('[data-open="meds"]')) { if (remDlg.open) remDlg.close(); return openMeds(); }
+  if (t.closest('[data-open="reminders"]')) { if (settingsDlg.open) settingsDlg.close(); return openReminders(); }
+  if (t.closest('#rem-on')) return turnOnReminders();
   if (t.closest('[data-med-new]')) return openMedEdit(null);
   const medEditBtn = t.closest('[data-med-edit]');
   if (medEditBtn) {
