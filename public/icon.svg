@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1e1c1a"/>
-  <circle cx="32" cy="34" r="16" fill="#eb6834"/>
-  <circle cx="26" cy="32" r="2.2" fill="#1e1c1a"/>
-  <circle cx="38" cy="32" r="2.2" fill="#1e1c1a"/>
-  <path d="M26 39 q6 5 12 0" stroke="#1e1c1a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-  <path d="M30 18 q2 -6 6 -4" stroke="#eb6834" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <title>DadBuddy</title>
+  <rect width="64" height="64" rx="15" fill="#232A5C"/>
+  <!-- The D is a hug: its bowl holds a sleeping baby. -->
+  <path d="M18.5 13.5h10a18.5 18.5 0 0 1 0 37h-10z" fill="none" stroke="#FFC93C" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="32.5" cy="33" r="9.5" fill="#FFF1CC"/>
+  <path d="M30.6 23.9c-.3-2.6 2.3-4.3 4.4-2.6" fill="none" stroke="#FFF1CC" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M27.4 32.4q1.7 1.7 3.4 0M34.2 32.4q1.7 1.7 3.4 0" fill="none" stroke="#232A5C" stroke-width="1.7" stroke-linecap="round"/>
+  <circle cx="27.6" cy="36" r="1.5" fill="#FF9E8A"/>
+  <circle cx="37.4" cy="36" r="1.5" fill="#FF9E8A"/>
 </svg>
