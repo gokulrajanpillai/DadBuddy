@@ -10,11 +10,13 @@ const BabyRules = (() => {
     temp: ['armpit'],
     weight: ['weight'],
     vitd: ['drops'],
+    med: ['dose'], // one of Mum's medicines; `med` holds the medicine's id
   };
   const POO = ['meconium', 'green', 'yellow', 'brown', 'pale', 'red', 'black'];
   const BREAST = ['left', 'right'];
   const WHO = ['mum', 'dad'];
-  const FIELDS = ['kind', 'subtype', 'start_at', 'end_at', 'amount_ml', 'value', 'poo', 'pee', 'note'];
+  const FIELDS = ['kind', 'subtype', 'start_at', 'end_at', 'amount_ml', 'value', 'poo', 'pee', 'note', 'med'];
+  const MED_ID = /^[A-Za-z0-9-]{8,64}$/;
   const MAX_TIMER_H = { feed: 6, sleep: 16 };
 
   const isTimer = (e) => (e.kind === 'feed' && BREAST.includes(e.subtype)) || e.kind === 'sleep';
@@ -24,7 +26,7 @@ const BabyRules = (() => {
   // Pick the entry fields from untrusted input and coerce their types.
   function pick(src, base = {}) {
     const e = { ...base };
-    for (const k of ['kind', 'subtype', 'note', 'poo', 'pee']) if (k in src) e[k] = src[k];
+    for (const k of ['kind', 'subtype', 'note', 'poo', 'pee', 'med']) if (k in src) e[k] = src[k];
     for (const k of ['start_at', 'end_at', 'amount_ml', 'value']) if (k in src) e[k] = toNum(src[k]);
     return e;
   }
@@ -38,12 +40,14 @@ const BabyRules = (() => {
       value: e.kind === 'temp' || e.kind === 'weight',
       poo: e.kind === 'nappy' && e.subtype !== 'wet',
       pee: e.kind === 'nappy' && e.subtype !== 'dirty',
+      med: e.kind === 'med',
     };
     for (const [k, ok] of Object.entries(keep)) if (!ok || out[k] === undefined) out[k] = ok ? out[k] ?? null : null;
     if (typeof out.value === 'number') out.value = Math.round(out.value * 100) / 100;
     out.note = typeof out.note === 'string' && out.note.trim() ? out.note.trim() : null;
     out.poo = out.poo || null;
     out.pee = out.pee || null;
+    out.med = out.med || null;
     return out;
   }
 
@@ -67,6 +71,7 @@ const BabyRules = (() => {
       return 'Weight must be between 0.4 and 30 kg';
     if (e.poo != null && !POO.includes(e.poo)) return `poo must be one of ${POO.join(', ')}`;
     if (e.pee != null && e.pee !== 'dark') return "pee must be 'dark' or empty";
+    if (e.kind === 'med' && !(typeof e.med === 'string' && MED_ID.test(e.med))) return 'Choose which medicine';
     if (e.note != null && (typeof e.note !== 'string' || e.note.length > 500)) return 'Notes can be up to 500 characters';
     return null;
   }

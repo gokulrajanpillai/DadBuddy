@@ -47,3 +47,11 @@ test('isTimer: breastfeeds and sleeps only', () => {
   assert.equal(R.isTimer({ kind: 'feed', subtype: 'formula' }), false);
   assert.equal(R.isTimer({ kind: 'sleep', subtype: 'sleep' }), true);
 });
+
+test("a dose of Mum's medicine must say which medicine", () => {
+  const ok = R.normalise({ kind: 'med', subtype: 'dose', start_at: NOW, med: 'med-0001-abcd', value: 3 });
+  assert.equal(ok.value, null);
+  assert.equal(R.validateEvent(ok, NOW), null);
+  assert.match(R.validateEvent(R.normalise({ kind: 'med', subtype: 'dose', start_at: NOW }), NOW), /which medicine/);
+  assert.equal(R.normalise({ kind: 'nappy', subtype: 'wet', start_at: NOW, med: 'med-0001-abcd' }).med, null, 'only doses keep a medicine');
+});

@@ -19,6 +19,10 @@ with the decision taken for each finding. Each guidance figure in the app links 
 | Reduce the risk of SIDS (safe sleep) | /baby/caring-for-a-newborn/reduce-the-risk-of-sudden-infant-death-syndrome/ | 25 Nov 2025 |
 | Helping your baby to sleep (newborns ~18h/24h) | /baby/caring-for-a-newborn/helping-your-baby-to-sleep/ | 28 Jan 2025 |
 | Vitamins for children (vitamin D 8.5–10µg from birth; >500ml formula exception) | /conditions/baby/weaning-and-feeding/vitamins-for-children/ | 30 May 2024 |
+| Breastfeeding and medicines (paracetamol, ibuprofen; codeine, decongestants, aspirin, herbal remedies) | /baby/breastfeeding-and-bottle-feeding/breastfeeding-and-lifestyle/medicines/ | 6 May 2026 |
+| Paracetamol for adults (1–2 × 500mg, 4 hours apart, 8 in 24 hours) | /medicines/paracetamol-for-adults/ | 24 Mar 2026 |
+| Ibuprofen for adults (1–2 × 200mg, up to 3 times a day, 4 hours apart; check if breastfeeding) | /medicines/ibuprofen-for-adults/ | 27 Aug 2025 |
+| Vitamin D (10µg a day for adults, including breastfeeding women) | /conditions/vitamins-and-minerals/vitamin-d/ | 2 Aug 2020 |
 
 ## Findings and decisions
 
@@ -128,6 +132,20 @@ with the decision taken for each finding. Each guidance figure in the app links 
     NHS age bands, so this is the most important thing to set.
 37. **Contrast** is re-measured for every new pair in all three themes. Every text pair is at least 4.5:1 and every icon at least 3:1.
     The setup page's green step badge got a dark tick in Dark mode, because white on that green measured 2.1:1.
+
+### v5: Mum's medicines
+38. **Mum's medicines live next to the baby's log.** In the first weeks Mum is often on regular painkillers (and sometimes
+    vitamins, iron or injections), timed around feeds, while exhausted. Each medicine is one big tap target on Today; the
+    chip says "Can take now", "Next from 14:20" or "Due now (09:00)". Dad sees the same cards, so he can help keep track.
+39. **The app never decides a dose.** Parents enter the dose, the hours between doses and the most doses in 24 hours, from
+    the prescription or leaflet. Starting points for paracetamol, ibuprofen and vitamin D quote nhs.uk and link to it, and the
+    ibuprofen one repeats the NHS advice to check with a pharmacist or doctor while breastfeeding.
+40. **Logging early, or over the 24-hour limit, asks first** rather than refusing: the dose may have been taken earlier and
+    logged late. The sheet says when the next dose is allowed and gives 111/999 advice if too much may have been taken.
+41. **Stopping a medicine keeps it** (under Stopped), so old doses keep their name in History and the CSV export.
+42. **Help gains "Mum's medicines while breastfeeding"**, from the NHS page: tell professionals you're breastfeeding;
+    paracetamol is usually best; codeine, decongestant tablets, aspirin for pain and herbal remedies aren't recommended.
+43. **The medicine list changes only at home**, like the baby profile, so both phones always agree on what each dose means.
 
 ### Verification
 - `npm test`: 16 tests covering each NHS rule (age bands, data-coverage gating, 30-minute feed grouping, formula-only babies,

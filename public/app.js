@@ -1,5 +1,5 @@
 'use strict';
-/* global evaluate, feedSessions, sleepMsIn, ageInDays, ageLabel, POO_COLOURS, POO_BY_ID, BabyRules, Store */
+/* global evaluate, feedSessions, sleepMsIn, ageInDays, ageLabel, POO_COLOURS, POO_BY_ID, BabyRules, BabyMeds, Store */
 
 // ------------------------------------------------------------ constants & helpers
 
@@ -7,23 +7,23 @@ const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 const BREAST = ['left', 'right'];
 const KINDS = [
   ['feed', 'Feed'], ['nappy', 'Nappy'], ['sleep', 'Sleep'],
-  ['temp', 'Temp'], ['weight', 'Weight'], ['vitd', 'Vitamin D'],
+  ['temp', 'Temp'], ['weight', 'Weight'], ['vitd', 'Vitamin D'], ['med', "Mum's medicine"],
 ];
 const SUBTYPES = {
   feed: [['left', 'Left'], ['right', 'Right'], ['expressed', 'Expressed'], ['formula', 'Formula']],
   nappy: [['wet', 'Wet'], ['dirty', 'Dirty'], ['both', 'Both']],
-  sleep: [['sleep', 'Sleep']], temp: [['armpit', 'Armpit']], weight: [['weight', 'Weight']], vitd: [['drops', 'Drops']],
+  sleep: [['sleep', 'Sleep']], temp: [['armpit', 'Armpit']], weight: [['weight', 'Weight']], vitd: [['drops', 'Drops']], med: [['dose', 'Dose']],
 };
 const LABEL = {
   left: 'Left breast', right: 'Right breast', expressed: 'Expressed milk', formula: 'Formula',
   wet: 'Wet nappy', dirty: 'Dirty nappy', both: 'Wet and dirty nappy',
-  sleep: 'Sleep', armpit: 'Temperature', weight: 'Weight', drops: 'Vitamin D drops',
+  sleep: 'Sleep', armpit: 'Temperature', weight: 'Weight', drops: 'Vitamin D drops', dose: "Mum's medicine",
 };
 const ICON = {
   left: 'i-breast', right: 'i-breast', expressed: 'i-bottle', formula: 'i-bottle',
-  wet: 'i-drop', dirty: 'i-nappy', both: 'i-nappy', sleep: 'i-moon', armpit: 'i-thermo', weight: 'i-scale', drops: 'i-sun',
+  wet: 'i-drop', dirty: 'i-nappy', both: 'i-nappy', sleep: 'i-moon', armpit: 'i-thermo', weight: 'i-scale', drops: 'i-sun', dose: 'i-pill',
 };
-const GROUP = { feed: 'feed', nappy: 'nappy', sleep: 'sleep', temp: 'health', weight: 'health', vitd: 'health' };
+const GROUP = { feed: 'feed', nappy: 'nappy', sleep: 'sleep', temp: 'health', weight: 'health', vitd: 'health', med: 'mum' };
 const WHO_NAME = { mum: 'Mum', dad: 'Dad' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -80,6 +80,7 @@ const state = {
   who: null,
   profile: { babyName: 'Baby', dob: null, birthWeightKg: null },
   events: [],
+  meds: [],
   days: 30,
   view: 'today',
   filter: 'all',
@@ -193,8 +194,9 @@ async function pushAndPull() {
   let since = (await Store.getMeta('rev')) || 0, more = true;
   while (more) {
     const r = await net('GET', `/api/sync?since=${since}`, null, 15000);
-    await Store.mergeRemote(r.events, r.rev, r.profile);
+    await Store.mergeRemote(r.events, r.rev, r.profile, r.meds);
     state.profile = r.profile;
+    if (r.meds) state.meds = r.meds;
     since = r.rev;
     more = r.more;
   }
@@ -286,6 +288,9 @@ function staleNote() {
   return `<p class="stale-note">${icon('i-clock')}<span>Entries from the other phone ${since} aren't included until you're both home. Bear this in mind with the checks and alerts below.</span></p>`;
 }
 
+const medOf = (e) => state.meds.find((m) => m.id === e.med);
+const labelOf = (e) => (e.kind === 'med' ? medOf(e)?.name || 'Medicine' : LABEL[e.subtype]);
+
 function eventMeta(e, gap) {
   const meta = [];
   if (e.kind === 'feed') {
@@ -307,6 +312,9 @@ function eventMeta(e, gap) {
   } else if (e.kind === 'weight') {
     const bw = state.profile.birthWeightKg;
     meta.push(`${e.value.toFixed(2)} kg${bw ? ` · ${e.value >= bw ? '+' : '−'}${Math.round(Math.abs(e.value - bw) * 1000)} g from birth` : ''}`);
+  } else if (e.kind === 'med') {
+    const m = medOf(e);
+    meta.push(m?.dose ? `Mum · ${esc(m.dose)}` : 'Mum');
   }
   if (e.note) meta.push(esc(e.note));
   return meta;
@@ -314,10 +322,10 @@ function eventMeta(e, gap) {
 
 function eventRow(e, gap) {
   const meta = eventMeta(e, gap);
-  return `<li class="event" data-id="${e.uid}" role="button" tabindex="0" aria-label="Edit ${LABEL[e.subtype]} at ${fmtTime(e.start_at)}">
+  return `<li class="event" data-id="${e.uid}" role="button" tabindex="0" aria-label="Edit ${esc(labelOf(e))} at ${fmtTime(e.start_at)}">
     <time>${fmtTime(e.start_at)}</time>
     <span class="kind-ic ${GROUP[e.kind]}">${icon(ICON[e.subtype])}</span>
-    <span class="what"><b>${LABEL[e.subtype]}</b>${meta.length ? `<span class="meta">${meta.join(' · ')}</span>` : ''}</span>
+    <span class="what"><b>${esc(labelOf(e))}</b>${meta.length ? `<span class="meta">${meta.join(' · ')}</span>` : ''}</span>
     <span class="avatar sm ${e.by}" title="${WHO_NAME[e.by]}">${WHO_NAME[e.by][0]}</span>
   </li>`;
 }
@@ -463,10 +471,231 @@ function renderToday() {
     </li>`)
     .join('');
 
+  renderMedsToday(now);
+
   // ---- Recent
   const gaps = sessionGapsById();
   const recent = [...state.events].sort((a, b) => b.start_at - a.start_at).slice(0, 8);
   $('#recent').innerHTML = recent.map((e) => eventRow(e, gaps.get(e.uid))).join('');
+}
+
+// ------------------------------------------------------------ Mum's medicines
+
+const activeMeds = () => state.meds.filter((m) => m.active);
+const doses = () => state.events.filter((e) => e.kind === 'med');
+function clock(t) {
+  const d = startOfDay(t), today = startOfDay(Date.now());
+  if (d === today) return fmtTime(t);
+  return `${d === addDays(today, 1) ? 'tomorrow' : d === addDays(today, -1) ? 'yesterday' : dateFmt.format(t)} ${fmtTime(t)}`;
+}
+
+// One line for the medicine list: "Every 4 hours, up to 4 in 24 hours" / "At 08:00 and 20:00".
+function scheduleText(m) {
+  const most = m.max_day ? `, up to ${m.max_day} in 24 hours` : '';
+  if (m.schedule === 'times') {
+    const t = m.times.length > 1 ? `${m.times.slice(0, -1).join(', ')} and ${m.times[m.times.length - 1]}` : m.times[0];
+    return `At ${t}`;
+  }
+  return `At least ${m.every_h} ${m.every_h === 1 ? 'hour' : 'hours'} apart${most}`;
+}
+
+// The chip on a medicine card, and whether it's due.
+function medChip(m, st, now) {
+  if (m.schedule === 'times') {
+    if (st.slot != null && st.slot <= now) return { cls: 'due', text: `Due now (${fmtTime(st.slot)})` };
+    if (st.slot != null) return { cls: 'ready', text: `Due ${fmtTime(st.slot)}` };
+    return { cls: '', text: st.nextAt ? `Next ${clock(st.nextAt)}` : 'Taken' };
+  }
+  if (st.nextAt && st.nextAt > now) return { cls: '', text: `Next from ${clock(st.nextAt)}` };
+  return { cls: 'ready', text: st.last ? 'Can take now' : 'Not taken yet' };
+}
+
+function renderMedsToday(now) {
+  const meds = activeMeds();
+  const block = $('#meds-block');
+  const later = storage.get('medsLater', false);
+  block.hidden = !meds.length && later;
+  $('#meds-manage').hidden = !meds.length;
+  if (!meds.length) {
+    $('#meds-today').innerHTML = `<div class="med-empty"><p>Log Mum's painkillers, vitamins or anything else she's been given, and see when the next dose is due.</p>
+      <span class="row"><button class="mini-btn sun" data-med-new>Add a medicine</button><button class="text-btn" data-meds-later>Not now</button></span></div>`;
+    return;
+  }
+  $('#meds-today').innerHTML = meds.map((m) => {
+    const st = BabyMeds.medStatus(m, doses(), now);
+    const chip = medChip(m, st, now);
+    const bits = [st.last ? `Last ${fmtAgo(st.last).toLowerCase()}` : 'No doses yet'];
+    if (st.count24 && (m.max_day || st.count24 > 1)) bits.push(`${st.count24}${m.max_day ? ` of ${m.max_day}` : ''} in 24h`);
+    return `<button class="med-card ${chip.cls}" data-med="${m.id}" aria-label="Log a dose of ${esc(m.name)}. ${chip.text}">
+      ${icon('i-pill')}
+      <span class="med-text"><b>${esc(m.name)}</b><small>${[m.dose && esc(m.dose), bits.join(' · ')].filter(Boolean).join(' · ')}</small></span>
+      <span class="med-state">${chip.text}</span>
+    </button>`;
+  }).join('');
+}
+
+// Tap a medicine: log a dose, unless it's early or over the 24-hour limit, in which case ask first.
+let pendingDose = null;
+async function logDose(medId, confirmed = false) {
+  const m = state.meds.find((x) => x.id === medId);
+  if (!m) return;
+  const st = BabyMeds.medStatus(m, doses(), Date.now());
+  if (!confirmed && (st.atMax || st.tooSoon)) {
+    const ago = st.last ? fmtDur(Date.now() - st.last) : '';
+    $('#dose-check-title').textContent = `Log another ${m.name.toLowerCase()} dose?`;
+    $('#dose-check-body').textContent = st.atMax
+      ? `That would be more than the ${m.max_day} ${m.max_day === 1 ? 'dose' : 'doses'} in 24 hours you set. The next one is allowed from ${clock(st.nextAt)}.`
+      : m.schedule === 'gap'
+        ? `The last dose was ${ago} ago, and you set at least ${m.every_h} hours between doses. The next one is allowed from ${clock(st.nextAt)}.`
+        : `The last dose was only ${ago} ago.`;
+    pendingDose = medId;
+    return $('#dose-check').showModal();
+  }
+  try {
+    undoable(await post({ kind: 'med', subtype: 'dose', med: m.id }), `${m.name} logged`);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+$('#dose-check-ok').addEventListener('click', () => {
+  $('#dose-check').close();
+  if (pendingDose) logDose(pendingDose, true);
+  pendingDose = null;
+});
+
+// The medicine list (Manage) and the add/edit form.
+const medsSheet = $('#meds-sheet');
+function openMeds() {
+  const row = (m) => `<div class="row-item${m.active ? '' : ' stopped'}">
+      <span><b>${esc(m.name)}</b><small>${[m.dose && esc(m.dose), scheduleText(m), m.remind ? 'Reminders on' : ''].filter(Boolean).join(' · ')}</small></span>
+      <button type="button" class="mini-btn" data-med-edit="${m.id}">${m.active ? 'Edit' : 'Start again'}</button>
+    </div>`;
+  const on = state.meds.filter((m) => m.active), off = state.meds.filter((m) => !m.active);
+  $('#meds-list').innerHTML = on.map(row).join('') + (off.length ? `<p class="hint" style="padding:10px 14px 0">Stopped</p>${off.map(row).join('')}` : '');
+  if (!medsSheet.open) medsSheet.showModal();
+}
+
+const medEdit = $('#med-edit');
+const medForm = $('#med-form');
+const mf = (n) => medForm.elements.namedItem(n);
+let editingMed = null;
+$('#med-presets').innerHTML = BabyMeds.PRESETS.map((p) => `<button type="button" class="chip" data-preset="${p.id}">${p.name}</button>`).join('')
+  + '<button type="button" class="chip" data-preset="">Something else</button>';
+
+function timeRow(v = '') {
+  return `<label><input type="time" value="${v}" aria-label="Time"><button type="button" data-time-remove aria-label="Remove this time">${icon('i-x')}</button></label>`;
+}
+function setSchedule(v) {
+  for (const r of medForm.querySelectorAll('input[name="schedule"]')) r.checked = r.value === v;
+  $('#med-gap-field').hidden = v !== 'gap';
+  $('#med-times-field').hidden = v !== 'times';
+  if (v === 'times' && !$('#med-times').children.length) $('#med-times').innerHTML = timeRow('09:00');
+}
+function fillMed(m) {
+  mf('name').value = m.name || '';
+  mf('dose').value = m.dose || '';
+  mf('every_h').value = m.every_h ?? '';
+  mf('max_day').value = m.max_day ?? '';
+  mf('remind').checked = !!m.remind;
+  $('#med-times').innerHTML = (m.times || []).map(timeRow).join('');
+  setSchedule(m.schedule || 'gap');
+}
+function openMedEdit(id) {
+  editingMed = id ? state.meds.find((m) => m.id === id) : null;
+  medForm.reset();
+  $('#med-error').hidden = true;
+  $('#med-preset-note').hidden = true;
+  $('#med-presets-field').hidden = !!editingMed;
+  $('#med-edit-title').textContent = editingMed ? `Edit ${editingMed.name}` : 'Add a medicine';
+  $('#med-stop').hidden = !editingMed?.active;
+  fillMed(editingMed || { schedule: 'gap', remind: true });
+  medEdit.showModal();
+}
+$('#med-presets').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-preset]');
+  if (!b) return;
+  for (const c of $$('#med-presets .chip')) c.classList.toggle('on', c === b);
+  const p = BabyMeds.PRESETS.find((x) => x.id === b.dataset.preset);
+  fillMed(p ? { ...p, remind: mf('remind').checked } : { schedule: 'gap', remind: mf('remind').checked });
+  const note = $('#med-preset-note');
+  note.hidden = !p;
+  if (p) note.innerHTML = `${esc(p.note)} <a href="${p.link}" target="_blank" rel="noopener">NHS page</a>`;
+  if (!p) mf('name').focus();
+});
+medForm.addEventListener('change', (ev) => { if (ev.target.name === 'schedule') setSchedule(ev.target.value); });
+$('#med-add-time').addEventListener('click', () => {
+  if ($('#med-times').children.length < 6) $('#med-times').insertAdjacentHTML('beforeend', timeRow());
+});
+$('#med-times').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-time-remove]');
+  if (b) b.closest('label').remove();
+});
+
+async function saveMed(fields) {
+  try {
+    const r = await net('POST', '/api/meds', fields);
+    state.meds = r.meds;
+    await Store.setMeta('meds', r.meds);
+    return r;
+  } catch (err) {
+    throw new Error(err.offline
+      ? "Medicines can only be added or changed at home, so both phones stay in step. Connect to your home Wi-Fi and try again. You can still log doses of medicines already on the list."
+      : err.status === 401 ? 'Sign in again (tap your name at the top), then try again.' : err.message);
+  }
+}
+medForm.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const schedule = (medForm.querySelector('input[name="schedule"]:checked') || {}).value || 'gap';
+  const fields = {
+    id: editingMed?.id,
+    name: mf('name').value,
+    dose: mf('dose').value,
+    schedule,
+    every_h: mf('every_h').value.replace(',', '.'),
+    max_day: mf('max_day').value,
+    times: $$('#med-times input').map((i) => i.value).filter(Boolean),
+    remind: mf('remind').checked,
+    active: true,
+  };
+  const err = BabyMeds.validateMed(BabyMeds.cleanMed(fields));
+  if (err) return medError(err);
+  try {
+    await saveMed(fields);
+    medEdit.close();
+    if (medsSheet.open) openMeds();
+    renderAll();
+    toast(editingMed ? 'Medicine updated' : `${fields.name.trim()} added`);
+  } catch (e) {
+    medError(e.message);
+  }
+});
+$('#med-stop').addEventListener('click', async () => {
+  if (!editingMed) return;
+  try {
+    await saveMed({ ...editingMed, active: false });
+    medEdit.close();
+    if (medsSheet.open) openMeds();
+    renderAll();
+    toast(`${editingMed.name} moved to Stopped. Its doses stay in History.`);
+  } catch (e) {
+    medError(e.message);
+  }
+});
+function medError(msg) {
+  const el = $('#med-error');
+  el.textContent = msg;
+  el.hidden = false;
+}
+async function restartMed(id) {
+  const m = state.meds.find((x) => x.id === id);
+  try {
+    await saveMed({ ...m, active: true });
+    openMeds();
+    renderAll();
+    toast(`${m.name} is back on the list`);
+  } catch (e) {
+    toast(e.message);
+  }
 }
 
 // ------------------------------------------------------------ trends
@@ -555,7 +784,7 @@ function renderTimeline(now) {
     const end = isRunning(e) ? now : e.end_at ?? e.start_at;
     if (end < from) continue;
     const x0 = x(e.start_at);
-    const tip = esc(`${fmtTime(e.start_at)} ${LABEL[e.subtype]}${eventMeta(e).length ? ' · ' + eventMeta(e).join(' · ').replace(/<[^>]+>/g, '') : ''}`);
+    const tip = esc(`${fmtTime(e.start_at)} ${labelOf(e)}${eventMeta(e).length ? ' · ' + eventMeta(e).join(' · ').replace(/<[^>]+>/g, '') : ''}`);
     if (e.kind === 'feed' || e.kind === 'sleep') {
       const w = Math.max(3, x(end) - x0);
       const y = e.kind === 'feed' ? 6 : 30, cls = e.kind === 'feed' ? 'f-feed' : 'f-sleep';
@@ -776,6 +1005,15 @@ function syncFields(fresh = false) {
   $('#poo-field').hidden = !(kind === 'nappy' && sub !== 'wet');
   $('#pee-field').hidden = !(kind === 'nappy' && sub !== 'dirty');
   $('#value-field').hidden = !(kind === 'temp' || kind === 'weight');
+  $('#med-field').hidden = kind !== 'med';
+  if (kind === 'med') {
+    const sel = fe('med'), cur = editing?.med || sel.value;
+    const list = state.meds.filter((m) => m.active || m.id === cur);
+    sel.innerHTML = list.length
+      ? list.map((m) => `<option value="${m.id}">${esc(m.name)}${m.dose ? ` (${esc(m.dose)})` : ''}</option>`).join('')
+      : '<option value="">Add a medicine first (Manage, under Mum\'s medicines)</option>';
+    if (cur && list.some((m) => m.id === cur)) sel.value = cur;
+  }
   $('#when-label').textContent = kind === 'sleep' ? 'Fell asleep' : breast ? 'Started' : 'When';
   const v = fe('value');
   if (kind === 'temp') {
@@ -801,7 +1039,7 @@ function openSheet({ event = null, kind = 'feed', subtype } = {}) {
   $('#form-error').hidden = true;
   $('#delete-btn').hidden = !event;
   if (event) {
-    $('#sheet-title').textContent = `Edit ${LABEL[event.subtype].toLowerCase()}`;
+    $('#sheet-title').textContent = `Edit ${event.kind === 'med' ? labelOf(event) : LABEL[event.subtype].toLowerCase()}`;
     setKind(event.kind, event.subtype);
     fe('start').value = toLocalInput(event.start_at);
     if (event.end_at != null) {
@@ -857,6 +1095,10 @@ form.addEventListener('submit', async (ev) => {
     const raw = fe('value').value.replace(',', '.');
     if (raw === '') return formError(kind === 'temp' ? 'Enter the temperature' : 'Enter the weight');
     body.value = Number(raw);
+  }
+  if (kind === 'med') {
+    if (!fe('med').value) return formError('Add a medicine first, from Manage under Mum\'s medicines');
+    body.med = fe('med').value;
   }
   if (kind === 'nappy') {
     body.poo = subtype !== 'wet' ? radioVal('poo') || null : null;
@@ -1034,8 +1276,18 @@ document.addEventListener('click', (ev) => {
   }
   if (t.closest('[data-setup-later]')) { storage.set('setupLater', true); return renderToday(); }
   if (t.closest('[data-open="settings"]')) return openSettings();
+  if (t.closest('[data-open="meds"]')) return openMeds();
+  if (t.closest('[data-med-new]')) return openMedEdit(null);
+  const medEditBtn = t.closest('[data-med-edit]');
+  if (medEditBtn) {
+    const m = state.meds.find((x) => x.id === medEditBtn.dataset.medEdit);
+    return m?.active ? openMedEdit(m.id) : restartMed(medEditBtn.dataset.medEdit);
+  }
+  const medBtn = t.closest('[data-med]');
+  if (medBtn) return logDose(medBtn.dataset.med);
+  if (t.closest('[data-meds-later]')) { storage.set('medsLater', true); return renderToday(); }
   const go = t.closest('[data-goto]');
-  if (go) { ev.preventDefault(); return setView(go.dataset.goto, go.getAttribute('href')); }
+  if (go) { ev.preventDefault(); go.closest('dialog')?.close(); return setView(go.dataset.goto, go.getAttribute('href')); }
   const row = t.closest('.event[data-id], .row-item[data-id]');
   if (row) {
     const e = state.events.find((x) => x.uid === row.dataset.id);
@@ -1073,8 +1325,8 @@ function exportCsv() {
   const rows = [...state.events].sort((a, b) => a.start_at - b.start_at);
   const cell = (v) => (v == null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   const iso = (v) => (v == null ? '' : new Date(v).toISOString());
-  const lines = ['kind,subtype,start,end,amount_ml,value,poo,pee,note,by'];
-  for (const r of rows) lines.push([r.kind, r.subtype, iso(r.start_at), iso(r.end_at), r.amount_ml, r.value, r.poo, r.pee, r.note, r.by].map(cell).join(','));
+  const lines = ['kind,subtype,start,end,amount_ml,value,poo,pee,medicine,note,by'];
+  for (const r of rows) lines.push([r.kind, r.subtype, iso(r.start_at), iso(r.end_at), r.amount_ml, r.value, r.poo, r.pee, r.kind === 'med' ? labelOf(r) : null, r.note, r.by].map(cell).join(','));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
   a.download = `baby-log-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -1120,6 +1372,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
   try {
     state.who = await Store.getMeta('who');
     state.profile = (await Store.getMeta('profile')) || state.profile;
+    state.meds = (await Store.getMeta('meds')) || [];
     state.sync.lastSyncAt = await Store.getMeta('lastSyncAt');
   } catch {
     toast('This browser is blocking storage, so DadBuddy can\'t keep entries on this phone.');

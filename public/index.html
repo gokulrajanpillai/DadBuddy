@@ -106,6 +106,14 @@
           <button class="act health small" data-quick="weight"><svg><use href="#i-scale"/></svg><b>Weight</b></button>
         </div>
 
+        <div id="meds-block">
+          <div class="checks-head">
+            <h3 class="section-label">Mum's medicines</h3>
+            <button class="text-btn" data-open="meds" id="meds-manage">Manage</button>
+          </div>
+          <div id="meds-today" class="med-list"></div>
+        </div>
+
         <div class="checks-head">
           <h3 class="section-label">Today's checks</h3>
           <a class="src-link" href="#help-feeding" data-goto="help">How these work</a>
@@ -163,6 +171,7 @@
           <button data-filter="nappy">Nappies</button>
           <button data-filter="sleep">Sleep</button>
           <button data-filter="health">Health</button>
+          <button data-filter="med">Mum</button>
         </div>
         <div id="history"></div>
         <button id="older" class="ghost-btn">Show older</button>
@@ -278,6 +287,20 @@
           <p class="src">Source: <a href="https://www.nhs.uk/conditions/baby/weaning-and-feeding/vitamins-for-children/" target="_blank" rel="noopener">NHS — vitamins for children</a></p>
         </details>
 
+        <details class="help-sec" id="help-meds">
+          <summary>Mum's medicines while breastfeeding</summary>
+          <ul>
+            <li>Tell your GP, midwife, health visitor, pharmacist or dentist that you're breastfeeding whenever you talk about medicines.</li>
+            <li>Small amounts of a medicine can pass into breast milk, but usually very little, and very few medicines are unsafe while breastfeeding.</li>
+            <li><strong>Paracetamol</strong> is usually the best painkiller to take while breastfeeding. Check first if it's combined with other medicines.</li>
+            <li>If a professional thinks you need an anti-inflammatory painkiller, <strong>ibuprofen</strong> is thought to be the safest choice. Check with a pharmacist or doctor first.</li>
+            <li>Not recommended while breastfeeding: <strong>codeine</strong>, decongestant tablets, liquids or powders, <strong>aspirin</strong> for pain relief, and herbal remedies. Ask before using decongestant sprays or antihistamines.</li>
+            <li>Don't stop a prescribed medicine without talking to your GP.</li>
+            <li>The doses and gaps in DadBuddy are what you enter. Always follow the prescription or the leaflet. If you think too much has been taken, call 111 for advice, or 999 if someone is unwell.</li>
+          </ul>
+          <p class="src">Sources: <a href="https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/breastfeeding-and-lifestyle/medicines/" target="_blank" rel="noopener">NHS — breastfeeding and medicines</a> · <a href="https://www.nhs.uk/medicines/paracetamol-for-adults/" target="_blank" rel="noopener">NHS — paracetamol for adults</a> · <a href="https://www.nhs.uk/medicines/ibuprofen-for-adults/" target="_blank" rel="noopener">NHS — ibuprofen for adults</a></p>
+        </details>
+
         <p class="footnote">Guidance summarised from nhs.uk pages last reviewed between 2023 and 2026; read on 21 November 2026. Always follow the advice of your midwife, health visitor or GP.</p>
       </section>
     </main>
@@ -333,6 +356,11 @@
       <label class="check-field" id="pee-field">
         <input type="checkbox" name="pee_dark">
         <span>Pee looked dark yellow or brown</span>
+      </label>
+
+      <label class="field" id="med-field">
+        <span>Medicine</span>
+        <select name="med"></select>
       </label>
 
       <div class="field" id="value-field">
@@ -401,6 +429,11 @@
       </div>
 
       <div class="field">
+        <span>Mum's medicines</span>
+        <button type="button" class="ghost-btn small" data-open="meds">Manage Mum's medicines</button>
+      </div>
+
+      <div class="field">
         <span>This phone</span>
         <p class="hint" id="settings-sync"></p>
         <div id="install"></div>
@@ -414,6 +447,78 @@
         <button type="submit" class="primary-btn">Save</button>
       </div>
       <p class="footnote">DadBuddy records what you log. Entries stay on your phones and your home computer, and sync over your home Wi-Fi. It isn't a medical device and doesn't replace your midwife, health visitor, GP or NHS 111.</p>
+    </form>
+  </dialog>
+
+  <!-- ============================================================ Mum's medicines -->
+  <dialog id="meds-sheet" class="sheet" aria-labelledby="meds-title">
+    <form method="dialog">
+      <div class="sheet-head">
+        <h2 id="meds-title">Mum's medicines</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <div id="meds-list" class="card-list"></div>
+      <button type="button" class="ghost-btn" data-med-new>+ Add a medicine</button>
+      <p class="hint">Medicines are added and changed at home, so both phones show the same list. Doses can be logged anywhere.</p>
+      <p class="footnote">Check with a pharmacist, midwife or GP before starting a new medicine while breastfeeding. <a href="#help-meds" data-goto="help">What the NHS says</a></p>
+    </form>
+  </dialog>
+
+  <dialog id="med-edit" class="sheet" aria-labelledby="med-edit-title">
+    <form id="med-form" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="med-edit-title">Add a medicine</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <div class="field" id="med-presets-field">
+        <span>Start from</span>
+        <div class="chips" id="med-presets"></div>
+      </div>
+      <p class="preset-note" id="med-preset-note" hidden></p>
+      <label class="field"><span>Name</span><input name="name" maxlength="40" autocomplete="off" required></label>
+      <label class="field"><span>Dose <em>(optional)</em></span><input name="dose" maxlength="40" autocomplete="off" placeholder="For example 2 × 500mg tablets"></label>
+      <div class="field">
+        <span>When it's taken</span>
+        <div class="seg" role="radiogroup" aria-label="When it's taken">
+          <label><input type="radio" name="schedule" value="gap"><span>Every few hours</span></label>
+          <label><input type="radio" name="schedule" value="times"><span>At set times</span></label>
+        </div>
+      </div>
+      <label class="field" id="med-gap-field"><span>Hours to leave between doses</span><input name="every_h" type="number" min="0.5" max="72" step="0.5" inputmode="decimal"></label>
+      <div class="field" id="med-times-field">
+        <span>Times</span>
+        <div class="time-list" id="med-times"></div>
+        <button type="button" class="chip" id="med-add-time">+ Add a time</button>
+      </div>
+      <label class="field"><span>Most doses in 24 hours <em>(optional)</em></span><input name="max_day" type="number" min="1" max="24" step="1" inputmode="numeric"></label>
+      <label class="check-field remind">
+        <input type="checkbox" name="remind">
+        <span>Remind when a dose is due</span>
+      </label>
+      <p class="hint">Follow the prescription or the leaflet. DadBuddy only uses these numbers to show when the next dose is due.</p>
+      <p class="form-error" id="med-error" role="alert" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="danger-btn" id="med-stop" hidden>Stop taking</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost-btn small" data-close>Cancel</button>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dose-check" class="sheet" aria-labelledby="dose-check-title">
+    <form method="dialog">
+      <div class="sheet-head">
+        <h2 id="dose-check-title">Log another dose?</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <p id="dose-check-body"></p>
+      <p class="hint">If it was taken earlier and you're logging it late, change the time afterwards from Latest. If you think too much has been taken, call 111 for advice, or 999 if someone is unwell.</p>
+      <div class="sheet-actions">
+        <span class="spacer"></span>
+        <button type="button" class="ghost-btn small" data-close>Cancel</button>
+        <button type="button" class="primary-btn" id="dose-check-ok">Log it anyway</button>
+      </div>
     </form>
   </dialog>
 
@@ -441,12 +546,14 @@
       <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.5M12 17v.3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
       <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
+      <symbol id="i-pill" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.2" y="8.4" width="17.6" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/><path d="m9.5 9.5 5 5"/></g></symbol>
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     </defs>
   </svg>
 
   <script src="guidance.js"></script>
   <script src="rules.js"></script>
+  <script src="meds.js"></script>
   <script src="store.js"></script>
   <script src="app.js"></script>
 </body>

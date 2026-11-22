@@ -20,7 +20,7 @@
   --sleep: #1baf7a;  --sleep-soft: #dbf3e9;  --sleep-strong: #127a55;
   --health: #6250d6; --health-soft: #ebe8fc; --health-strong: #5442c4;
   --bubble-ink: #ffffff;
-  --mum: #c2457a;
+  --mum: #c2457a;    --mum-soft: #fbe6ef;  --mum-strong: #a8386a;
   --dad: #14875f;
   --ok: #157f3b;     --ok-soft: #e1f3e6;
   --warn: #9a5b00;   --warn-soft: #fbefd6;
@@ -44,7 +44,7 @@
     --nappy: #3987e5;  --nappy-soft: #1c2a4a;  --nappy-strong: #1f63b5;
     --sleep: #199e70;  --sleep-soft: #15312e;  --sleep-strong: #127a55;
     --health: #9085e9; --health-soft: #2a2752; --health-strong: #5442c4;
-    --mum: #e2739f; --dad: #3cc28f;
+    --mum: #e2739f; --dad: #3cc28f; --mum-soft: #3a1f2e; --mum-strong: #a8386a;
     --ok: #4cc47a; --ok-soft: #173023;
     --warn: #e8a640; --warn-soft: #3a2c14;
     --urgent: #ff7a70; --urgent-soft: #45201d;
@@ -62,7 +62,7 @@
   --nappy: #3987e5;  --nappy-soft: #1c2a4a;  --nappy-strong: #1f63b5;
   --sleep: #199e70;  --sleep-soft: #15312e;  --sleep-strong: #127a55;
   --health: #9085e9; --health-soft: #2a2752; --health-strong: #5442c4;
-  --mum: #e2739f; --dad: #3cc28f;
+  --mum: #e2739f; --dad: #3cc28f; --mum-soft: #3a1f2e; --mum-strong: #a8386a;
   --ok: #4cc47a; --ok-soft: #173023;
   --warn: #e8a640; --warn-soft: #3a2c14;
   --urgent: #ff7a70; --urgent-soft: #45201d;
@@ -81,7 +81,7 @@
   --sleep: #3f8f6a;  --sleep-soft: #0f1d16;  --sleep-strong: #3f8f6a;
   --health: #8676c4; --health-soft: #1a1626; --health-strong: #8676c4;
   --bubble-ink: #120c08;
-  --mum: #bd6890; --dad: #3f8a68;
+  --mum: #bd6890; --dad: #3f8a68; --mum-soft: #26121b; --mum-strong: #bd6890;
   --ok: #7fae6a; --ok-soft: #16200f;
   --warn: #d99a45; --warn-soft: #2a1c0b;
   --urgent: #e8705f; --urgent-soft: #2e120d;
@@ -347,6 +347,7 @@ main { padding: 0 16px; }
 .kind-ic.nappy { background: var(--nappy-soft); color: var(--nappy); }
 .kind-ic.sleep { background: var(--sleep-soft); color: var(--sleep); }
 .kind-ic.health { background: var(--health-soft); color: var(--health); }
+.kind-ic.mum { background: var(--mum-soft); color: var(--mum); }
 .event .what { min-width: 0; }
 .event .what b { font-weight: 700; }
 .event .meta { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -525,3 +526,37 @@ input:focus, textarea:focus { outline: 3px solid var(--nappy); outline-offset: 1
 .status { border-radius: 20px; }
 .tile { border-radius: 20px; }
 .mini-btn.sun { background: var(--sun); color: var(--on-sun); border-color: transparent; min-height: 44px; padding: 0 16px; }
+
+/* ---------------------------------------------------------------- Mum's medicines
+   One big tap target per medicine: tap to log a dose. The right-hand chip says when the next one is due. */
+.med-list { display: grid; gap: 10px; }
+.med-card {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; text-align: left;
+  min-height: 76px; padding: 12px 14px; border: 0; border-radius: 22px; background: var(--mum-soft); transition: transform .08s;
+}
+.med-card:active { transform: scale(.97); }
+.med-card > svg { width: 42px; height: 42px; padding: 10px; border-radius: 50%; background: var(--mum-strong); color: var(--bubble-ink); }
+.med-text { display: grid; min-width: 0; }
+.med-text b { font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.med-text small { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.med-state {
+  font-size: 13px; font-weight: 800; padding: 6px 10px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface); color: var(--ink-2);
+}
+.med-card.due .med-state { background: var(--sun); color: var(--on-sun); }
+.med-card.ready .med-state { color: var(--ok); }
+.med-empty { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--card-border); padding: 16px; }
+.med-empty p { margin: 0 0 10px; color: var(--ink-2); font-size: 15px; }
+.med-empty .row { display: flex; gap: 8px; align-items: center; }
+#meds-list:empty { display: none; }
+#meds-list .row-item { align-items: center; }
+#meds-list .row-item > span { display: grid; min-width: 0; }
+#meds-list .row-item small { color: var(--ink-2); font-size: 13px; }
+#meds-list .row-item.stopped { opacity: .7; }
+.time-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.time-list label { display: flex; align-items: center; gap: 4px; }
+.time-list input { width: 8.5em; }
+.time-list button { border: 0; background: none; color: var(--ink-2); min-width: 36px; min-height: 44px; font-size: 18px; }
+.preset-note { margin: -4px 0 0; font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+.check-field.remind input { accent-color: var(--ok); }
+.chips .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }

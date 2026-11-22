@@ -17,6 +17,7 @@ See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source 
 - **Nappies:** wet with one tap; dirty or both with a poo-colour picker, and an optional "dark pee" flag.
 - **Sleep timer.** Starting a feed ends a sleep and the other way round. Safe-sleep reminder while asleep.
 - **Temperature** (digital, under the arm), **weight** (kg, change since birth weight) and **vitamin D drops**.
+- **Mum's medicines:** add painkillers, vitamins or anything she's been given (with NHS-based starting points for paracetamol, ibuprofen and vitamin D), then tap to log a dose. Each card shows when the last dose was, how many in 24 hours, and when the next one is allowed or due. Logging a dose early, or over the 24-hour limit you set, asks first.
 - **Today's checks**, based on age and NHS guidance: feeds in 24h (8–12 or more in the first weeks),
   wet nappies (6 or more heavy from day 5), poos (2 or more from day 4), vitamin D, and sleep (information only).
 - **Alerts** with NHS wording and one-tap `tel:999` / `tel:111` links:
@@ -26,7 +27,7 @@ See [REVIEW.md](REVIEW.md) for the product and UX review, with every NHS source 
   - no poo for 2 days under 8 weeks
 - **Trends:** 24-hour timeline, 7-day charts, daily table, weight and temperature history.
 - **History** with filters, editing, deleting, Undo, and CSV export (made on the phone, so it works anywhere).
-- **Help:** NHS urgent-help signs, fever, feeding, nappies, safe sleep, formula safety and vitamin D, all linked to nhs.uk.
+- **Help:** NHS urgent-help signs, fever, feeding, nappies, safe sleep, formula safety, vitamin D and medicines while breastfeeding, all linked to nhs.uk.
 - **Friendly by design:** says good morning (or "Night shift, Dad" after 9pm), shows big one-tap buttons with round icons, and uses one colour per thing: orange for feeds, blue for nappies, green for sleep.
 - **Themes:** Light, Dark and a dim, warm **Night light**. Auto switches to Night light from 21:00 to 07:00.
 - UK English, 24-hour times.
@@ -40,7 +41,7 @@ DadBuddy isn't a medical device. It records what you log and points to NHS advic
 - **Away from home**, a bar under the header shows "Away from home · 3 changes to sync · last synced 14:20". Today's checks and alerts also carry a note that the other phone's recent entries aren't included yet. Alerts still show.
 - **If both phones change the same entry**, the most recent change wins. Deleted entries stay deleted.
 - **If both phones start a timer while apart**, the newer one keeps running and the older one is ended when the newer one started.
-- **The baby profile** (name, date of birth, birth weight) can only be changed at home, so both phones stay in step.
+- **The baby profile** (name, date of birth, birth weight) and **Mum's medicine list** can only be changed at home, so both phones stay in step. Doses can be logged anywhere.
 - The PC is the only server. Nothing leaves your home network.
 
 ## Run

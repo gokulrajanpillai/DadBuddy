@@ -2,7 +2,7 @@
 // The phone's own copy of the log (IndexedDB), so the app works away from home.
 //   events: every entry, keyed by uid (deleted ones keep deleted_at so they stay deleted)
 //   outbox: changes made on this phone that the home server hasn't seen yet, in order
-//   meta:   who is signed in, the last server rev pulled, the baby profile, lastSyncAt
+//   meta:   who is signed in, the last server rev pulled, the baby profile, Mum's medicines, lastSyncAt
 
 const Store = (() => {
   let dbp = null;
@@ -70,12 +70,13 @@ const Store = (() => {
 
   // Server rows replace local ones, except where this phone has a change still waiting to go up
   // (that change wins when it's sent, and the server's copy comes back on the next pull).
-  async function mergeRemote(rows, rev, profile) {
+  async function mergeRemote(rows, rev, profile, meds) {
     const pending = new Set((await outbox(100000)).map((o) => o.op.uid));
     await tx(['events', 'meta'], 'readwrite', (s) => {
       for (const r of rows) if (!pending.has(r.uid)) s.events.put(r);
       s.meta.put(rev, 'rev');
       if (profile) s.meta.put(profile, 'profile');
+      if (meds) s.meta.put(meds, 'meds');
     });
   }
 

@@ -4,7 +4,7 @@
 // arrives the next time the app is opened at home. Entries never pass through here:
 // /api/ requests always go to the network (the app keeps its data in IndexedDB).
 
-const CACHE = 'dadbuddy-v4';
+const CACHE = 'dadbuddy-v5';
 const SHELL = [
   '/',
   '/index.html',
@@ -12,6 +12,7 @@ const SHELL = [
   '/app.js',
   '/guidance.js',
   '/rules.js',
+  '/meds.js',
   '/store.js',
   '/manifest.webmanifest',
   '/icon.svg',

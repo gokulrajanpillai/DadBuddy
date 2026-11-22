@@ -73,7 +73,7 @@ const pull = (since = 0) => call('GET', `/api/sync?since=${since}`);
 const uid = (n) => `test-uid-${n}`;
 const MIN = 60_000;
 
-test('migration v2 -> v3 keeps entries, gives them uids and backs up first', async () => {
+test('migration v2 -> v4 keeps entries, gives them uids and backs up first', async () => {
   assert.match(log, /Migrated database to v3/);
   assert.ok(readdirSync(path.join(dataDir, 'backups')).some((f) => f.startsWith('baby-v2-')));
   const { data } = await pull(0);
@@ -195,4 +195,27 @@ test('on plain HTTP, phones are sent to setup or HTTPS; the certificate download
   assert.equal(cert.headers.get('content-type'), 'application/x-x509-ca-cert');
   const ping = await (await fetch(base + '/api/ping')).json();
   assert.equal(ping.httpsPort, httpsPort);
+});
+
+test("Mum's medicines: added at home, doses sync, stopping keeps the name", async () => {
+  assert.match(log, /Migrated database to v4/);
+  const bad = await call('POST', '/api/meds', { name: 'Paracetamol', schedule: 'gap' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.data.error, /hours/);
+  const add = await call('POST', '/api/meds', { name: 'Paracetamol', dose: '2 × 500mg', schedule: 'gap', every_h: 4, max_day: 4, remind: true });
+  assert.equal(add.status, 200);
+  const id = add.data.id;
+  assert.deepEqual(add.data.meds.find((m) => m.id === id),
+    { ...add.data.meds.find((m) => m.id === id), name: 'Paracetamol', every_h: 4, max_day: 4, times: [], remind: true, active: true });
+  const now = Date.now();
+  const r = await push([{ op: 'upsert', uid: uid(20), kind: 'med', subtype: 'dose', med: id, start_at: now - MIN, updated_at: now }]);
+  assert.equal(r.data.results[0].ok, true);
+  const noMed = await push([{ op: 'upsert', uid: uid(21), kind: 'med', subtype: 'dose', start_at: now - MIN, updated_at: now }]);
+  assert.match(noMed.data.results[0].error, /which medicine/);
+  await call('POST', '/api/meds', { ...add.data.meds.find((m) => m.id === id), active: false });
+  const { data } = await pull(0);
+  assert.equal(data.events.find((e) => e.uid === uid(20)).med, id);
+  assert.equal(data.meds.find((m) => m.id === id).active, false, 'stopped, not deleted');
+  const csv = await call('GET', '/api/export.csv');
+  assert.match(csv.data, /,Paracetamol,/);
 });

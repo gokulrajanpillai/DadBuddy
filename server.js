@@ -28,12 +28,14 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const CERT_DIR = path.join(DATA_DIR, 'certs');
 
-// Entry rules shared with the phones (public/rules.js), loaded into this process.
-const R = (() => {
+// Rules shared with the phones (public/*.js), loaded into this process.
+function loadShared(file) {
   const mod = { exports: {} };
-  new Function('module', readFileSync(path.join(PUBLIC_DIR, 'rules.js'), 'utf8'))(mod);
+  new Function('module', readFileSync(path.join(PUBLIC_DIR, file), 'utf8'))(mod);
   return mod.exports;
-})();
+}
+const R = loadShared('rules.js');
+const MEDS = loadShared('meds.js');
 
 // ---------------------------------------------------------------- database
 
@@ -44,7 +46,7 @@ db.exec('PRAGMA journal_mode = WAL;');
 const EVENTS_DDL = `
   CREATE TABLE events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind       TEXT    NOT NULL,          -- feed | nappy | sleep | temp | weight | vitd
+    kind       TEXT    NOT NULL,          -- feed | nappy | sleep | temp | weight | vitd | med
     subtype    TEXT    NOT NULL,
     start_at   INTEGER NOT NULL,          -- epoch ms
     end_at     INTEGER,                   -- epoch ms; NULL on a breastfeed/sleep = timer running
@@ -84,16 +86,17 @@ function migrate() {
       throw err;
     }
   }
+  const backup = () => {
+    const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+    const file = path.join(DATA_DIR, 'backups', `baby-v${version}-${stamp}.db`);
+    mkdirSync(path.dirname(file), { recursive: true });
+    db.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
+    console.log(`Backed up database to ${file}`);
+  };
   if (version < 3) {
     // v2 -> v3, for offline sync: uid = id made on the phone, rev = change counter,
     // deleted_at = tombstone so the other phone hears about deletions.
-    if (hasEvents) {
-      const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
-      const backup = path.join(DATA_DIR, 'backups', `baby-v${version}-${stamp}.db`);
-      mkdirSync(path.dirname(backup), { recursive: true });
-      db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
-      console.log(`Backed up database to ${backup}`);
-    }
+    if (hasEvents) backup();
     db.exec('BEGIN');
     try {
       db.exec('ALTER TABLE events ADD COLUMN uid TEXT');
@@ -108,10 +111,36 @@ function migrate() {
       throw err;
     }
   }
+  if (version < 4) {
+    // v3 -> v4: Mum's medicines. A dose is an event (kind 'med') pointing at its medicine.
+    if (hasEvents && version >= 3) backup();
+    db.exec('BEGIN');
+    try {
+      db.exec('ALTER TABLE events ADD COLUMN med TEXT');
+      db.exec(`CREATE TABLE IF NOT EXISTS meds (
+        id         TEXT PRIMARY KEY,
+        name       TEXT NOT NULL,
+        dose       TEXT NOT NULL DEFAULT '',
+        schedule   TEXT NOT NULL CHECK (schedule IN ('gap','times')),
+        every_h    REAL,                       -- gap: hours to leave between doses
+        max_day    INTEGER,                    -- most doses in any 24 hours
+        times      TEXT NOT NULL DEFAULT '[]', -- times: JSON list of "HH:MM"
+        remind     INTEGER NOT NULL DEFAULT 0,
+        active     INTEGER NOT NULL DEFAULT 1, -- stopped medicines stay, so old doses keep their name
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`);
+      db.exec('COMMIT');
+      if (hasEvents) console.log('Migrated database to v4');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_events_start ON events (start_at)');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_uid ON events (uid)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_events_rev ON events (rev)');
-  db.exec('PRAGMA user_version = 3');
+  db.exec('PRAGMA user_version = 4');
 }
 migrate();
 
@@ -125,10 +154,16 @@ const q = {
   live: db.prepare('SELECT * FROM events WHERE deleted_at IS NULL ORDER BY start_at'),
   running: db.prepare(`SELECT * FROM events WHERE deleted_at IS NULL AND end_at IS NULL
                         AND ((kind = 'feed' AND subtype IN ('left','right')) OR kind = 'sleep') ORDER BY start_at`),
-  insert: db.prepare(`INSERT INTO events (uid, kind, subtype, start_at, end_at, amount_ml, value, poo, pee, note, by, created_at, updated_at, rev)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+  insert: db.prepare(`INSERT INTO events (uid, kind, subtype, start_at, end_at, amount_ml, value, poo, pee, note, med, by, created_at, updated_at, rev)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
   update: db.prepare(`UPDATE events SET kind = ?, subtype = ?, start_at = ?, end_at = ?, amount_ml = ?, value = ?, poo = ?, pee = ?,
-                      note = ?, updated_at = ?, rev = ? WHERE uid = ?`),
+                      note = ?, med = ?, updated_at = ?, rev = ? WHERE uid = ?`),
+  meds: db.prepare('SELECT * FROM meds ORDER BY active DESC, created_at'),
+  medById: db.prepare('SELECT * FROM meds WHERE id = ?'),
+  medInsert: db.prepare(`INSERT INTO meds (id, name, dose, schedule, every_h, max_day, times, remind, active, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+  medUpdate: db.prepare(`UPDATE meds SET name = ?, dose = ?, schedule = ?, every_h = ?, max_day = ?, times = ?, remind = ?, active = ?,
+                         updated_at = ? WHERE id = ?`),
   endTimer: db.prepare('UPDATE events SET end_at = ?, updated_at = ?, rev = ? WHERE uid = ?'),
   tombstone: db.prepare('UPDATE events SET deleted_at = ?, updated_at = ?, rev = ? WHERE uid = ?'),
   getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
@@ -143,6 +178,10 @@ function profile() {
   const get = (k) => q.getSetting.get(k)?.value ?? null;
   const bw = get('birth_weight_kg');
   return { babyName: get('baby_name') ?? 'Baby', dob: get('dob'), birthWeightKg: bw == null ? null : Number(bw) };
+}
+
+function meds() {
+  return q.meds.all().map((m) => ({ ...m, times: JSON.parse(m.times), remind: !!m.remind, active: !!m.active }));
 }
 
 // What phones see: everything but the internal row id.
@@ -176,11 +215,11 @@ function applyOp(op, who, now) {
   if (err) return { uid, ok: false, error: err, current: existing ? toClient(existing) : null };
 
   if (existing) {
-    q.update.run(e.kind, e.subtype, e.start_at, e.end_at, e.amount_ml, e.value, e.poo, e.pee, e.note, stamp, nextRev(), uid);
+    q.update.run(e.kind, e.subtype, e.start_at, e.end_at, e.amount_ml, e.value, e.poo, e.pee, e.note, e.med, stamp, nextRev(), uid);
   } else {
     const by = WHO.includes(op.by) ? op.by : who;
     const created = Number.isSafeInteger(op.created_at) && op.created_at > 0 ? Math.min(op.created_at, now) : stamp;
-    q.insert.run(uid, e.kind, e.subtype, e.start_at, e.end_at, e.amount_ml, e.value, e.poo, e.pee, e.note, by, created, stamp, nextRev());
+    q.insert.run(uid, e.kind, e.subtype, e.start_at, e.end_at, e.amount_ml, e.value, e.poo, e.pee, e.note, e.med, by, created, stamp, nextRev());
   }
   return { uid, ok: true, changed: true };
 }
@@ -320,7 +359,7 @@ async function api(req, res, url) {
     const rows = q.since.all(since, limit);
     const more = rows.length === limit;
     const rev = more ? rows[rows.length - 1].rev : Math.max(since, q.maxRev.get().rev);
-    return send(res, 200, { rev, more, profile: profile(), events: rows.map(toClient) });
+    return send(res, 200, { rev, more, profile: profile(), meds: meds(), events: rows.map(toClient) });
   }
 
   if (p === '/api/sync' && m === 'POST') {
@@ -361,14 +400,31 @@ async function api(req, res, url) {
     return send(res, 200, profile());
   }
 
+  // Mum's medicines: added and changed at home (like the baby profile), so both phones agree.
+  if (p === '/api/meds' && m === 'POST') {
+    const b = await readJson(req);
+    const med = MEDS.cleanMed(b);
+    const err = MEDS.validateMed(med);
+    if (err) throw new HttpError(400, err);
+    const now = Date.now();
+    const id = b.id == null ? randomUUID() : String(b.id);
+    if (!MEDS.ID_RE.test(id)) throw new HttpError(400, 'Invalid medicine id');
+    const args = [med.name, med.dose, med.schedule, med.every_h, med.max_day, JSON.stringify(med.times), +med.remind, +med.active];
+    if (q.medById.get(id)) q.medUpdate.run(...args, now, id);
+    else q.medInsert.run(id, ...args, now, now);
+    broadcast();
+    return send(res, 200, { id, meds: meds() });
+  }
+
   if (p === '/api/export.csv' && m === 'GET') {
     const rows = q.live.all();
     const esc = (v) => (v == null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
     const iso = (v) => (v == null ? '' : new Date(v).toISOString());
-    const lines = ['uid,kind,subtype,start,end,amount_ml,value,poo,pee,note,by'];
+    const medName = new Map(meds().map((x) => [x.id, x.name]));
+    const lines = ['uid,kind,subtype,start,end,amount_ml,value,poo,pee,medicine,note,by'];
     for (const r of rows)
       lines.push(
-        [r.uid, r.kind, r.subtype, iso(r.start_at), iso(r.end_at), r.amount_ml, r.value, r.poo, r.pee, r.note, r.by]
+        [r.uid, r.kind, r.subtype, iso(r.start_at), iso(r.end_at), r.amount_ml, r.value, r.poo, r.pee, medName.get(r.med) ?? null, r.note, r.by]
           .map(esc)
           .join(',')
       );
